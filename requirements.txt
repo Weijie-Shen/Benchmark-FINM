@@ -1,0 +1,4 @@
+# v1.0 pinned versions — bump deliberately, not casually, since SDK changes
+# can shift behavior (param names, response shapes, etc.) and break repro.
+python-dotenv==1.0.1
+openai==1.59.9

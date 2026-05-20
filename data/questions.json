@@ -1,0 +1,86 @@
+[
+  {
+    "id": "q01",
+    "topic": "probability",
+    "difficulty": "easy",
+    "question": "You flip a fair coin repeatedly until you observe two heads in a row (HH). What is the expected number of flips?",
+    "answer": "6",
+    "answer_type": "number"
+  },
+  {
+    "id": "q02",
+    "topic": "probability",
+    "difficulty": "easy",
+    "question": "Two points are chosen independently and uniformly at random on the interval [0, 1]. What is the probability that the absolute difference between them is less than 0.5?",
+    "answer": "0.75",
+    "answer_type": "number",
+    "tolerance": 0.001
+  },
+  {
+    "id": "q03",
+    "topic": "probability",
+    "difficulty": "easy",
+    "question": "You roll two fair six-sided dice. What is the probability that their sum equals 7? Give the answer as a decimal to 4 decimal places.",
+    "answer": "0.1667",
+    "answer_type": "number",
+    "tolerance": 0.001
+  },
+  {
+    "id": "q04",
+    "topic": "statistics",
+    "difficulty": "medium",
+    "question": "X and Y are independent Uniform(0, 1) random variables. What is the expected value of max(X, Y)?",
+    "answer": "0.6667",
+    "answer_type": "number",
+    "tolerance": 0.001
+  },
+  {
+    "id": "q05",
+    "topic": "combinatorics",
+    "difficulty": "easy",
+    "question": "In the classic birthday problem, what is the minimum number of people in a room such that the probability of at least two sharing a birthday exceeds 50%? Assume 365 equally likely birthdays.",
+    "answer": "23",
+    "answer_type": "number"
+  },
+  {
+    "id": "q06",
+    "topic": "statistics",
+    "difficulty": "easy",
+    "question": "X is a Bernoulli random variable with success probability p = 0.7. What is Var(X)?",
+    "answer": "0.21",
+    "answer_type": "number",
+    "tolerance": 0.001
+  },
+  {
+    "id": "q07",
+    "topic": "statistics",
+    "difficulty": "easy",
+    "question": "If X follows a standard normal distribution N(0, 1), what is E[X^2]?",
+    "answer": "1",
+    "answer_type": "number"
+  },
+  {
+    "id": "q08",
+    "topic": "combinatorics",
+    "difficulty": "medium",
+    "question": "How many trailing zeros are at the end of 100! (100 factorial) in base 10?",
+    "answer": "24",
+    "answer_type": "number"
+  },
+  {
+    "id": "q09",
+    "topic": "math",
+    "difficulty": "easy",
+    "question": "Compute the sum of the infinite geometric series 1/2 + 1/4 + 1/8 + 1/16 + ...",
+    "answer": "1",
+    "answer_type": "number"
+  },
+  {
+    "id": "q10",
+    "topic": "probability",
+    "difficulty": "easy",
+    "question": "Events A and B satisfy P(A) = 0.4, P(B) = 0.5, and P(A and B) = 0.2. Are A and B independent? Answer 'yes' or 'no'.",
+    "answer": "yes",
+    "answer_type": "string"
+  }
+]
