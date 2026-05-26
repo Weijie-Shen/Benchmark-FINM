@@ -1,0 +1,72 @@
+[
+  {
+    "id": "p01",
+    "topic": "probability",
+    "question": "There are n people attending a party, each wearing a hat that belongs to them. At the start of the party, everyone's hats are collected and placed together. When the party is about to end, the hats are redistributed. The distribution process is as follows:\n\nIn each round, all remaining hats are randomly distributed to every person still present, with each person receiving exactly one hat.\nIf a participant receives their own hat, they leave the party; if they do not receive their own hat, they stay and wait for the next round of distribution.\nThis process continues until every person has received their own hat.\n\nQuestion: Suppose it takes T rounds of distribution for the process to terminate (i.e., for everyone to have received their own hat). What is the expected value of T?",
+    "answer": "n",
+    "answer_type": "string"
+  },
+  {
+    "id": "p02",
+    "topic": "probability",
+    "question": "Three chords are drawn at random in a circle — that is, we independently choose 3 pairs of points uniformly at random on the circumference (6 points total), and each pair is joined by a chord. These chords divide the interior of the circle into several regions. Find the expected number of regions.",
+    "answer": "5",
+    "answer_type": "number"
+  },
+  {
+    "id": "p03",
+    "topic": "probability",
+    "question": "An urn contains 20 balls colored each of the 7 colors of the rainbow (140 total balls). We select balls one-by-one without replacement. Given that in the first 70 draws we selected 5 more red balls than yellow, find the probability the 71st ball drawn is yellow.",
+    "answer": "5/28",
+    "answer_type": "number"
+  },
+  {
+    "id": "p04",
+    "topic": "probability",
+    "question": "Two numbers are drawn independently and uniformly from [0,1]. You are shown one of them at random and must guess whether it is the larger or the smaller of the pair. What is the highest probability of guessing correctly that any strategy can achieve?",
+    "answer": "3/4",
+    "answer_type": "number"
+  },
+  {
+    "id": "p05",
+    "topic": "probability",
+    "question": "A unit stick is broken at n-1 points chosen independently and uniformly at random, yielding n pieces. Find the probability that these pieces can form an n-sided polygon.",
+    "answer": "1 - n/2^(n-1)",
+    "answer_type": "string"
+  },
+  {
+    "id": "p06",
+    "topic": "probability",
+    "question": "100 passengers board a plane that has exactly 100 seats. The first k passengers each choose a seat uniformly at random and sit down. Passenger k+1 sits in their own assigned seat if it is empty; otherwise, they choose a seat uniformly at random from the remaining empty seats. Passenger k+2 does the same: they take their own seat if it is still empty, and otherwise choose a random empty seat. This continues for every subsequent passenger until all 100 passengers are seated.\n\nWhat is the probability that the last passenger ends up in their own assigned seat?",
+    "answer": "1/(k+1)",
+    "answer_type": "string"
+  },
+  {
+    "id": "p07",
+    "topic": "probability",
+    "question": "Alex picks a number from 1 to 1000 for Bob to guess. Each time Bob guesses, he is told whether his guess is too high, too low, or correct. Every guess that is too high or too low costs Bob $1; a correct guess costs nothing. What is the minimum amount of money Bob must prepare in advance to be guaranteed to find the number?",
+    "answer": "9",
+    "answer_type": "number"
+  },
+  {
+    "id": "p08",
+    "topic": "probability",
+    "question": "Let M be an n×n matrix whose entries are independent and identically distributed, each following the standard normal distribution N(0,1). Find the variance of the determinant of M.",
+    "answer": "n!",
+    "answer_type": "string"
+  },
+  {
+    "id": "p09",
+    "topic": "probability",
+    "question": "You play a one-player game with two opaque boxes. On each of 100 turns, you must choose one of two actions: \"place,\" in which a third party places $1 into one of the two boxes chosen uniformly at random, or \"take,\" in which one of the two boxes is chosen uniformly at random, emptied, and the money in it becomes yours. The boxes are opaque, and you do not learn how much money you have taken until the game ends. Assuming optimal play, what is the expected payoff?",
+    "answer": "2961/32",
+    "answer_type": "number"
+  },
+  {
+    "id": "p10",
+    "topic": "probability",
+    "question": "Each of 10 employees brings one (distinct) present to an office party. Each present is given to a randomly selected employee by Santa (an employee can get more than one present). What is the probability that at least two employees receive no presents?",
+    "answer": "1 - (46 * 10!)/10^10",
+    "answer_type": "number"
+  }
+]

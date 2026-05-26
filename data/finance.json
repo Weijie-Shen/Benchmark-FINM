@@ -1,0 +1,497 @@
+[
+  {
+    "id": "f01",
+    "topic": "finance",
+    "question": "Suppose two assets in a Black-Scholes world have the same volatility but different drifts. How will the price of call options on them compare? Now suppose one of the assets undergoes downward jumps at random times. How will this affect option prices?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Asset Drift Comparison",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "identical_prices_verdict",
+              "name": "Identical Option Prices Verdict",
+              "points": 2,
+              "description": "Explicitly states that the option prices do NOT differ (they are identical / equal) despite the two assets having different real-world drifts."
+            },
+            {
+              "id": "risk_neutral_measure",
+              "name": "Risk-Neutral Measure & No-Arbitrage",
+              "points": 1.5,
+              "description": "Explains that derivative pricing is done under the risk-neutral measure to avoid arbitrage opportunities."
+            },
+            {
+              "id": "drift_replaced_by_r",
+              "name": "Drift Replaced by Risk-Free Rate r",
+              "points": 1.5,
+              "description": "Explains that under the risk-neutral measure both stocks' drifts are replaced by the risk-free rate r, so the real-world drift difference cancels out."
+            }
+          ]
+        },
+        {
+          "name": "Impact of Downward Jumps",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "higher_price_verdict",
+              "name": "Higher Option Price Verdict",
+              "points": 2,
+              "description": "Explicitly concludes that the call option on the asset with downward jumps must be GREATER (more expensive) than the no-jump Black-Scholes price C_BS.",
+              "trap": "A common AI mistake is concluding that downward jumps LOWER a call option's value. If the model states the price decreases or is lower, award 0 to this criterion."
+            },
+            {
+              "id": "convexity_of_payoff",
+              "name": "Convexity of Option Payoff",
+              "points": 1.5,
+              "description": "Explains that the call option has a convex price curve, so any tangent line (the delta hedge) lies entirely below the actual price curve."
+            },
+            {
+              "id": "hedge_underperformance",
+              "name": "Hedging Portfolio Underperformance after a Jump",
+              "points": 1.5,
+              "description": "Explains that when a jump occurs, the hedging portfolio value moves along the tangent line and finishes below the actual option value. By no-arbitrage, the initial price of the option with jumps must therefore be higher to compensate."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f02",
+    "topic": "finance",
+    "question": "Is it ever optimal to early exercise an American call option? What about a put option?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "American Call Option Decision",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "call_early_exercise_verdict",
+              "name": "Never Optimal for Non-Dividend Call",
+              "points": 2,
+              "description": "Explicitly states that it is never optimal to early exercise an American call option, assuming the underlying stock does not pay dividends."
+            },
+            {
+              "id": "portfolio_no_arbitrage",
+              "name": "Portfolio Replication & No-Arbitrage",
+              "points": 1.5,
+              "description": "Constructs a portfolio argument (e.g., one option C and K bonds B) to show that its value at maturity is max{S_T, K}, meaning its value at all previous times must satisfy C_t + K*B_t > S_t."
+            },
+            {
+              "id": "time_value_inequality",
+              "name": "Option Value Inequality Analysis",
+              "points": 1.5,
+              "description": "Derives or provides the inequality C_t > S_t - K (given non-negative interest rates, B_t <= 1), showing the option is worth more alive than its immediate exercise value."
+            }
+          ]
+        },
+        {
+          "name": "American Put Option Decision",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "put_early_exercise_verdict",
+              "name": "Can Be Optimal for Put",
+              "points": 2,
+              "description": "Explicitly states that it can be optimal to early exercise an American put option under certain market conditions."
+            },
+            {
+              "id": "optionality_value_argument",
+              "name": "Optionality vs. Immediate Cash Payoff",
+              "points": 1.5,
+              "description": "Explains that the equivalent no-arbitrage bounds or replication arguments do not hold effectively for put options."
+            },
+            {
+              "id": "deep_in_the_money_put",
+              "name": "Deep In-the-Money/Time Value Deprivation",
+              "points": 1.5,
+              "description": "Explains that when a put is deeply in-the-money, the optionality value becomes worth less than receiving the cash payoff today due to the time value of money."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f03",
+    "topic": "finance",
+    "question": "Suppose there are no interest rates. The spot price of a non-dividend paying stock is 20. Option A pays 1 dollar if the stock price is above 30 at any time in the next year. Option B pays 1 if the stock price is above 30 at the end of the year. How are the values of A and B related?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Standard Brownian Motion Analysis",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "general_inequality_verdict",
+              "name": "General Inequality Verdict",
+              "points": 2,
+              "description": "Explicitly states that option A is worth more than option B because if B pays off, A must have also paid off, but the converse is not true."
+            },
+            {
+              "id": "brownian_motion_half_value",
+              "name": "Exact Half-Value under Brownian Motion",
+              "points": 3,
+              "description": "Explains that under standard Brownian motion with zero interest rates (zero drift), hitting 30 implies a 50% chance of staying above 30 at expiry, making B worth exactly half the value of A."
+            }
+          ]
+        },
+        {
+          "name": "Geometric Brownian Motion Analysis",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "gbm_negative_drift",
+              "name": "Negative Drift in GBM",
+              "points": 2.5,
+              "description": "Explains that under Geometric Brownian motion with zero interest rates, the stock has a negative drift in the risk-neutral measure due to the -σ²T/2 term."
+            },
+            {
+              "id": "gbm_less_than_half",
+              "name": "Less Than Half-Value Verdict",
+              "points": 2.5,
+              "description": "Concludes that due to this negative drift under GBM, option B will be worth strictly less than half the value of option A."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f04",
+    "topic": "finance",
+    "question": "Suppose spot today is 90. A call option is struck at 100 and expires in one year. There are no interest rates. Spot moves log-normally in a perfect Black-Scholes world. I claim that I can hedge the option for free. Whenever spot crosses 100 in an upwards direction I borrow 100 and buy the stock. Whenever spot crosses 100 in a downwards direction I sell the stock and repay my loan. At expiry either the option is out-of-the-money in which case I have no position or it is in-the-money and I use the 100 dollar strike to payoff my loan. Thus the option has been hedged for free. Where is the error in this argument?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Strategy Definition and Practical Execution Costs",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "strategy_not_well_defined",
+              "name": "Strategy is Not Well-Defined at the Strike",
+              "points": 2,
+              "description": "States that the hedging strategy is fundamentally not well-defined because when the spot price first touches 100, it is impossible to know whether it will go up or down, making the required holding unclear."
+            },
+            {
+              "id": "epsilon_trading_losses",
+              "name": "Execution via Epsilon Interval and Whiplash Losses",
+              "points": 3,
+              "description": "Explains that to practically implement the strategy, one must buy at $100 + \\epsilon$ and sell at $100 - \\epsilon$, which incurs a definite loss of $2\\epsilon$ for each crossing, meaning the strategy is no longer riskless or free."
+            }
+          ]
+        },
+        {
+          "name": "Properties of Brownian Motion",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "infinite_crossings_property",
+              "name": "Infinite Crossings of Brownian Motion",
+              "points": 3,
+              "description": "Points out that under continuous-time Brownian motion, if the price hits a specific level, it will hit/cross that level infinitely many times within an arbitrarily small interval of time."
+            },
+            {
+              "id": "retrospective_indeterminacy",
+              "name": "Indeterminacy of Distinct Crossing Events",
+              "points": 2,
+              "description": "Explains that due to the infinite local oscillations of Brownian motion, it is practically impossible—even in retrospect—to distinctly define or know exactly when a single discrete crossing occurred."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f05",
+    "topic": "finance",
+    "question": "What happens to the price of a vanilla call option as volatility tends to infinity?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "General Pricing Bounds and Verdict",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "spot_price_limit_verdict",
+              "name": "Limit Equals Spot Price Verdict",
+              "points": 2.0,
+              "description": "Explicitly states the correct final verdict that as volatility tends to infinity, the call option price tends to the current stock/spot price (S)."
+            },
+            {
+              "id": "monotonicity_and_bounds",
+              "name": "Monotonicity and Upper Bound Reasoning",
+              "points": 3.0,
+              "description": "Explains via a model-independent approach that the call option price is a monotone increasing function of volatility, and since its theoretical maximum upper bound is the stock price itself, it must converge to the stock price."
+            }
+          ]
+        },
+        {
+          "name": "Black-Scholes Mathematical Derivation",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "d1_d2_limits",
+              "name": "Limits of d1 and d2",
+              "points": 2.5,
+              "description": "Demonstrates or argues analytically using the Black-Scholes components that as $\\sigma \\to \\infty$, $d_1 \\to \\infty$ (due to the dominant $+\\sigma^2$ term in the numerator) and $d_2 \\to -\\infty$ (due to the dominant $-\\sigma^2$ term)."
+            },
+            {
+              "id": "normal_cdf_convergence",
+              "name": "Convergence of Normal Cumulative Distributions",
+              "points": 2.5,
+              "description": "Explains that the corresponding cumulative normal probabilities converge such that $N(d_1) \\to 1$ and $N(d_2) \\to 0$, reducing the Black-Scholes formula ($C = S\\cdot N(d_1) - K e^{-rT} N(d_2)$) directly to the spot price $S$."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f06",
+    "topic": "finance",
+    "question": "What is riskier: a call option or the underlying? (Consider a one-day time horizon and compute which has bigger Delta as a fraction of value.)",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Risk Verdict and Relative Volatility Intuition",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "option_is_riskier_verdict",
+              "name": "Call Option is Riskier Verdict",
+              "points": 2.0,
+              "description": "Explicitly concludes that the call option portfolio is riskier when investing a fixed amount of capital."
+            },
+            {
+              "id": "absolute_vs_relative_delta",
+              "name": "Absolute vs. Relative Risk Disallowed Paradox",
+              "points": 3.0,
+              "description": "Explains that while the absolute Delta of a stock (1) is always larger than or equal to the absolute Delta of a call option ($0 \\le N(d_1) \\le 1$), this is misleading because the option's market value is significantly lower than the stock price, leading to greater leverage/risk per dollar invested."
+            }
+          ]
+        },
+        {
+          "name": "Mathematical Comparison of Delta as a Fraction of Value",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "fractional_delta_formulas",
+              "name": "Formulation of Fractional Deltas",
+              "points": 2.0,
+              "description": "Correctly sets up the fractional Delta equations to compare: $\\frac{1}{S_t}$ for the stock and $\\frac{N(d_1)}{S_t N(d_1) - K e^{-r(T-t)} N(d_2)}$ for the call option."
+            },
+            {
+              "id": "mathematical_proof",
+              "name": "Proof of Inequality via Positive N(d2)",
+              "points": 2.0,
+              "description": "Demonstrates mathematically that the option's fractional delta is larger because the presence of a positive $N(d_2)$ subtracted in the denominator reduces the denominator below $S_t N(d_1)$, making the total fraction exceed $\\frac{1}{S_t}$."
+            },
+            {
+              "id": "pnl_delta_relationship",
+              "name": "Justification of Delta as the Correct Risk Measure",
+              "points": 1.0,
+              "description": "Mentions that over a short (one-day) time horizon, the primary component of profit and loss resulting from a underlying price movement $\\Delta S$ is directly proportional to the position's Delta (i.e., $\\Delta S \\times \\frac{\\partial \\text{Value}}{\\partial S}$)."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f07",
+    "topic": "finance",
+    "question": "In the pricing of options, why doesn't it matter if the stock price exhibits mean reversion?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Real-World Dynamics and Option Price Verdict",
+          "max_points": 4,
+          "criteria": [
+            {
+              "id": "mean_reversion_definition",
+              "name": "Definition of Real-World Mean Reversion Dynamics",
+              "points": 2.0,
+              "description": "Explains that mean reversion represents the real-world dynamics of the stock, often represented as $dS_t = \\alpha(\\mu - S_t)dt + \\sigma S_t dW_t$ where $\\alpha$ is the mean reversion rate and $\\mu$ is the long-term mean."
+            },
+            {
+              "id": "price_independence_verdict",
+              "name": "Price Independence Verdict",
+              "points": 2.0,
+              "description": "Explicitly states the correct verdict that the real-world drift—whether it exhibits mean reversion or not—does not change or affect the final price of the option."
+            }
+          ]
+        },
+        {
+          "name": "Risk-Neutral Pricing Principle",
+          "max_points": 6,
+          "criteria": [
+            {
+              "id": "risk_neutral_relevance",
+              "name": "Relevance of Risk-Neutral Dynamics",
+              "points": 3.0,
+              "description": "Explains that for derivative pricing, we are only interested in and rely upon the risk-neutral dynamics of the asset rather than its real-world trajectory."
+            },
+            {
+              "id": "drift_becomes_rdt",
+              "name": "Drift Replaced by Risk-Free Rate",
+              "points": 3.0,
+              "description": "Explains that upon moving to the risk-neutral measure, the real-world drift of the stock is replaced by the risk-free rate ($r dt$), causing the mean-reverting components to disappear from the pricing equation."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f08",
+    "topic": "finance",
+    "question": "Team A plays team B, in a series of 7 games, whoever wins 4 games first wins. You want to bet 100 that your team wins the series, in which case you receive 200, or 0 if they lose. However the broker only allows bets on individual games. You can bet X on any individual game the day before it occurs to receive 2X if it wins and 0 if it loses. How do you achieve the desired pay-out? In particular, what do you bet on the first match?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Problem Framing and Model Mapping",
+          "max_points": 4,
+          "criteria": [
+            {
+              "id": "digital_option_equivalence",
+              "name": "Equivalence to Digital Option Replication",
+              "points": 2.0,
+              "description": "Correctly frames the question as an option pricing/replication problem, identifying the payout structure as a digital option on a symmetric binomial tree or random walk."
+            },
+            {
+              "id": "remaining_games_setup",
+              "name": "Setting up the Conditional Probability Structure",
+              "points": 2.0,
+              "description": "Recognizes that after the first game, there are 6 games remaining, and tracks the number of additional wins required (3 out of 6 remaining if the first game is won) to establish the up and down state payoffs."
+            }
+          ]
+        },
+        {
+          "name": "State Value and Bet Computation",
+          "max_points": 6,
+          "criteria": [
+            {
+              "id": "up_down_state_values",
+              "name": "Calculation of State Values",
+              "points": 3.0,
+              "description": "Accurately calculates the portfolio value in the 'up' state ($31.25) by using binomial coefficients to find the series win probability (21/32) and its symmetric counterpart for the 'down' state (-31.25)."
+            },
+            {
+              "id": "first_match_bet_verdict",
+              "name": "Correct First Match Bet Amount Verdict",
+              "points": 3.0,
+              "description": "Concludes with the exact correct value of $31.25 to be bet on the first match, derived via replication portfolio formulas ($100 \\times \\frac{42}{32} - 100$)."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f09",
+    "topic": "finance",
+    "question": "All being equal, which option has higher Vega? An at-the-money European call option with spot 100 or an at-the-money European call option with spot 200? (A structurer asked this question and didn't want formulas.)",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Option Value Scaling",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "homogeneity_scaling_argument",
+              "name": "Linear Scaling of ATM Options",
+              "points": 2.5,
+              "description": "Explains that because both options are at-the-money, doubling the spot price also implicitly doubles the strike price, allowing the factor of two to multiply directly through the option value."
+            },
+            {
+              "id": "option_value_verdict",
+              "name": "Relative Value Verdict",
+              "points": 2.5,
+              "description": "Explicitly concludes that the option with spot 200 (Option B) is worth exactly twice as much as the option with spot 100 (Option A)."
+            }
+          ]
+        },
+        {
+          "name": "Vega Comparison and Verdict",
+          "max_points": 5,
+          "criteria": [
+            {
+              "id": "higher_vega_verdict",
+              "name": "Higher Vega Verdict",
+              "points": 2.0,
+              "description": "Correctly states the final verdict that the at-the-money option with spot 200 has the higher Vega."
+            },
+            {
+              "id": "vega_scaling_reasoning",
+              "name": "Vega Scaling Factor",
+              "points": 3.0,
+              "description": "Explains without using mathematical formulas that the scaling factor of two multiplies directly through the Vega asset component as well, meaning the Vega of the spot 200 option is exactly twice the Vega of the spot 100 option."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "f10",
+    "topic": "finance",
+    "question": "Consider the following binomial tree. There are two identical underlying assets A and B with the same prices and volatility. If all were the same except that research suggests company A will do better than company B, how would the option prices compare?",
+    "answer_type": "open",
+    "answer": {
+      "total_points": 10,
+      "categories": [
+        {
+          "name": "Option Price Verdict",
+          "max_points": 4,
+          "criteria": [
+            {
+              "id": "identical_prices_verdict",
+              "name": "Identical Option Prices Verdict",
+              "points": 4.0,
+              "description": "Explicitly states that the option prices for asset A and asset B will be exactly the same (identical), regardless of the research favoring company A."
+            }
+          ]
+        },
+        {
+          "name": "Risk-Neutral Pricing and Drift Analogy",
+          "max_points": 6,
+          "criteria": [
+            {
+              "id": "risk_neutral_independence",
+              "name": "Risk-Neutral Probabilities Framework",
+              "points": 3.0,
+              "description": "Explains that when pricing options (under either a binomial tree or the Black-Scholes model), calculations are based on risk-neutral probabilities, which are completely independent of subjective research or expected real-world outperformance."
+            },
+            {
+              "id": "stock_drift_analogy",
+              "name": "Analogy to Stock Drift Independence",
+              "points": 3.0,
+              "description": "Points out that this scenario is directly analogous to the fundamental principle that the real-world drift of a stock price does not affect its derivative/option price, as long as the current asset prices and volatilities are identical."
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
