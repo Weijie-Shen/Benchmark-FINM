@@ -1,165 +1,67 @@
-"""OpenRouter client + unified LLM-as-judge + v3.0 tool calling.
+"""OpenRouter client + the two LLM judges.
 
-v3.0 changes vs v2.0:
- - Models under test now have access to two tools:
-     - calculator(expression)  — a Python-eval-based math evaluator (function calling)
-     - web search              — via OpenRouter's `plugins=[{"id":"web"}]` (RAG substitute)
- - Multi-turn tool dispatch: a model can call calculator up to MAX_TOOL_ITERATIONS
-   times before producing its final answer.
- - We log every tool call (name, arguments, result) into the Result for audit.
+Three public async entry points:
+  - call_model(cfg, prompt)                 -> str
+      Single-shot call to one of the models under test.
+  - judge_answer(question, expected, raw)   -> (correct, extracted, judge_text)
+      Binary judge for number / string / choice / unspecified answer types.
+  - judge_rubric_score(question, rubric, raw) -> (raw_total, judge_text, breakdown)
+      Rubric judge for `answer_type == "open"` questions.
 
-Grading is unchanged: a single Claude Sonnet 4.6 judge call still sees
-(question, expected, full raw response) and returns 3 lines.
+All calls go through one shared `AsyncOpenAI` client pointed at OpenRouter.
+The SDK handles 5xx / 429 / connection retries with exponential backoff.
 """
 from __future__ import annotations
 
-import asyncio
 import json
-import math
 import os
-from typing import Optional
+import re
 
 from .models import ModelConfig
+from .prompts import (
+    JUDGE_SYSTEM_PROMPT,
+    MODEL_SYSTEM_PROMPT,
+    RUBRIC_JUDGE_SYSTEM_PROMPT,
+)
 
 
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
-# Per single HTTP call to OpenRouter. Each tool-loop iteration is one HTTP call.
+# Per-HTTP-call timeouts (seconds). The SDK raises openai.APITimeoutError if
+# a single call exceeds this — the runner catches it as a cell-level error.
 MODEL_CALL_TIMEOUT_S = 120.0
 JUDGE_CALL_TIMEOUT_S = 60.0
 
-# Hard cap on the TOTAL answering time per (model, question), across ALL tool
-# iterations. After 2 minutes the runtime cancels the model's work and that
-# cell is recorded as an `error: TimeoutError` row. Keeps a single slow / chatty
-# model from holding up the whole run.
-TOTAL_ANSWER_TIMEOUT_S = 120.0
+# When sending the model's reply to the judge, keep this many chars from each
+# end. Reasoning models sometimes state the final answer near the top and
+# then ramble — keeping both ends prevents false negatives.
+JUDGE_EXCERPT_HEAD = 4000
+JUDGE_EXCERPT_TAIL = 4000
 
-# Cap how many calculator/tool iterations a single model can do per question.
-MAX_TOOL_ITERATIONS = 8
-
-
-# ---------------------------------------------------------------------------
-# Prompts
-# ---------------------------------------------------------------------------
-MODEL_SYSTEM_PROMPT = (
-    "You are answering a quantitative-finance interview question. Think step by step. "
-    "You have access to a `calculator` tool for arithmetic and to live web search "
-    "(used automatically by the runtime when helpful). Use these tools whenever "
-    "they reduce error. After your reasoning, clearly state your final answer at the end."
-)
-
-JUDGE_MODEL = "anthropic/claude-sonnet-4.6"
-
-# Weight applied to rubric scores so they line up with binary 0/1 scoring.
-#   contribution_to_total = rubric_score * RUBRIC_WEIGHT     (so 10/10 -> 1.0)
-# This number is tied to the 1-10 rubric scale; if you change the rubric scale
-# in the judge prompt below, update this so max contribution stays 1.0.
-RUBRIC_WEIGHT = 0.1
-
-JUDGE_SYSTEM_PROMPT = (
-    "你是一个评分助手。给你一道题、标准答案、以及某个模型的完整回复，"
-    "你判断模型回复中最终给出的答案是否正确。\n"
-    "\n"
-    "判定原则：\n"
-    "1. 看模型最终结论，而不是中间推理。如果中间算出了正确答案但最终改成别的，按最终的判。\n"
-    "2. 容忍合理的表达差异：\n"
-    "   - 数值：'0.667' ≈ '0.6667' ≈ '2/3' ≈ '66.7%'（合理误差内等价）\n"
-    "   - 数学符号：'√5' ≈ '2.236' ≈ 'sqrt(5)' ≈ '\\sqrt{5}'\n"
-    "   - 分数：'1/4' ≈ '0.25' ≈ '25%'\n"
-    "   - 公式：'2^(n-1)/(2^n-1)' ≈ '(2^(n-1))/(2^n - 1)' ≈ latex 形式\n"
-    "   - 时间：'11:23am' ≈ '11:23' ≈ '37 minutes before noon'\n"
-    "   - 语义：'down' ≈ 'decreases' ≈ 'the water level falls'\n"
-    "3. 如果题目问多个东西（例如同时问 with/without replacement），模型只要把标准答案对应的那部分答对即可。\n"
-    "4. 如果模型没给出可识别的最终答案，extracted 写 'N/A'，verdict 写 NO。\n"
-    "\n"
-    "输出格式（严格 3 行，不要其他内容）：\n"
-    "第 1 行：模型给出的最终答案（简短，≤30 字，仅事实，不要解释）\n"
-    "第 2 行：判定理由（≤30 字）\n"
-    "第 3 行：YES 或 NO（仅这两个词之一）"
-)
+# Single judge for both binary and rubric paths. DeepSeek-v4-pro is ~10x
+# cheaper than Sonnet for comparable instruction-following on this task.
+JUDGE_MODEL = "deepseek/deepseek-v4-pro"
 
 
-# Rubric judge — used only when answer_type == "open". The `expected` field
-# in this path is NOT a single answer; it is a multi-criterion rubric written
-# by the dataset author. Judge scores model's response 1-10 against it.
-RUBRIC_JUDGE_SYSTEM_PROMPT = (
-    "你是一个严格的 open question 评分员。你会收到：一道开放题、一份分级 rubric、"
-    "以及某个模型的完整回复。你按照 rubric 给模型回复打 1-10 分。\n"
-    "\n"
-    "通用打分锚点（rubric 中如有具体定义，以 rubric 为准）：\n"
-    "  1-3 分：完全没切中要点 / 事实错误 / 文不对题 / 没有有效内容\n"
-    "  4-6 分：部分切中 rubric 核心点，但有明显遗漏或错误\n"
-    "  7-8 分：主要 rubric 要点都答到了，论述基本清晰，有少量缺失\n"
-    "  9-10 分：完整覆盖 rubric 要点，论述清晰准确，无明显问题\n"
-    "\n"
-    "判分原则：\n"
-    "1. 严格按 rubric 衡量。rubric 没要求的『附加观点』不加分。\n"
-    "2. 看模型最终结论 + 关键推理。流水账中间过程不加分。\n"
-    "3. 没给出可识别答案 / 完全跑题 → 1-2 分。\n"
-    "4. 默认偏严，不要分数膨胀。\n"
-    "\n"
-    "输出格式（严格 3 行，不要其他内容）：\n"
-    "第 1 行：模型回答的核心要点摘要（≤30 字）\n"
-    "第 2 行：打分理由（≤60 字，说明哪些 rubric 要点命中 / 遗漏）\n"
-    "第 3 行：一个 1 到 10 的整数（仅一个数字，不带其他字符）"
-)
+class RubricJudgeParseError(RuntimeError):
+    """Raised when the rubric judge's reply can't be parsed: missing
+    ```json block, malformed JSON, or empty `scores` list. The cell is
+    recorded as `error` (re-runnable) — not as the model scoring 0."""
 
 
-# ---------------------------------------------------------------------------
-# Tools
-# ---------------------------------------------------------------------------
-CALCULATOR_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "calculator",
-        "description": (
-            "Evaluate a single Python-style math expression and return the numerical result. "
-            "Supports +, -, *, /, **, parentheses. Functions: sqrt, log (natural), ln, log2, log10, "
-            "exp, sin, cos, tan, factorial, comb (binomial coefficient), perm, ceil, floor, abs, "
-            "round, min, max, pow, sum. Constants: pi, e. "
-            "Example expressions: 'sqrt(5)', 'comb(10,2)/comb(52,2)', '(2/3)**10'."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "expression": {
-                    "type": "string",
-                    "description": "Math expression to evaluate.",
-                }
-            },
-            "required": ["expression"],
-        },
-    },
-}
-
-# OpenRouter's universal web search plugin. Acts as our RAG substitute since
-# no project corpus exists. Note: adds ~$0.004 per call.
-WEB_PLUGIN = {"id": "web", "max_results": 5}
-
-_SAFE_CALC_NAMES = {
-    "abs": abs, "min": min, "max": max, "round": round, "pow": pow, "sum": sum,
-    "sqrt": math.sqrt, "log": math.log, "ln": math.log,
-    "log2": math.log2, "log10": math.log10,
-    "exp": math.exp, "sin": math.sin, "cos": math.cos, "tan": math.tan,
-    "pi": math.pi, "e": math.e,
-    "factorial": math.factorial, "comb": math.comb, "perm": math.perm,
-    "ceil": math.ceil, "floor": math.floor,
-}
+class BinaryJudgeParseError(RuntimeError):
+    """Raised when the binary judge returns an empty / unparseable reply.
+    Like RubricJudgeParseError, the cell is recorded as `error` so it can
+    be re-run — never as the model scoring 0 due to a silent judge failure."""
 
 
-def _safe_calc(expression: str) -> str:
-    """Evaluate `expression` in a restricted namespace. Returns numeric result as string,
-    or 'Error: ...' on any failure. Blocks obvious sandbox-escape tokens."""
-    if not isinstance(expression, str) or not expression.strip():
-        return "Error: empty expression"
-    bad = ("__", "import", "open(", "exec(", "compile(", "eval(", "globals", "locals")
-    if any(tok in expression for tok in bad):
-        return "Error: forbidden token in expression"
-    try:
-        val = eval(expression, {"__builtins__": {}}, _SAFE_CALC_NAMES)   # noqa: S307
-    except Exception as e:
-        return f"Error: {type(e).__name__}: {e}"
-    return str(val)
+class EmptyChoicesError(RuntimeError):
+    """Raised when an OpenRouter response comes back with `choices=None`
+    or empty (sometimes happens on upstream content-filter rejections that
+    the SDK doesn't surface as an exception). Cell is recorded as `error`."""
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +84,7 @@ def _get_client():
         api_key=api_key,
         base_url=OPENROUTER_BASE_URL,
         timeout=MODEL_CALL_TIMEOUT_S,
+        max_retries=3,     # SDK retries 5xx / 429 / connection errors w/ backoff
         default_headers={
             "HTTP-Referer": os.environ.get("OPENROUTER_REFERER", ""),
             "X-Title":      os.environ.get("OPENROUTER_TITLE", "Quant Interview Benchmark"),
@@ -190,180 +93,165 @@ def _get_client():
     return _client
 
 
+def has_api_key() -> bool:
+    return bool(os.environ.get("OPENROUTER_API_KEY"))
+
+
 # ---------------------------------------------------------------------------
-# Model call with tool dispatch
+# Helpers
 # ---------------------------------------------------------------------------
-async def call_model(cfg: ModelConfig, prompt: str) -> tuple[str, list]:
-    """Public entry. Caps total answering time at TOTAL_ANSWER_TIMEOUT_S (2 min in v3.0).
-    On timeout, asyncio.TimeoutError propagates and the runner records that cell
-    as an `error` row."""
-    return await asyncio.wait_for(
-        _call_model_inner(cfg, prompt),
-        timeout=TOTAL_ANSWER_TIMEOUT_S,
+def _excerpt_for_judge(text: str) -> str:
+    """Truncate `text` by keeping head + tail, dropping any middle that
+    exceeds the budget. Returns text unchanged if it already fits."""
+    head, tail = JUDGE_EXCERPT_HEAD, JUDGE_EXCERPT_TAIL
+    if len(text) <= head + tail + 64:
+        return text
+    dropped = len(text) - head - tail
+    return (
+        f"{text[:head]}\n\n"
+        f"[... {dropped} chars truncated from middle ...]\n\n"
+        f"{text[-tail:]}"
     )
 
 
-async def _call_model_inner(cfg: ModelConfig, prompt: str) -> tuple[str, list]:
-    """v3.0 call body: the model can iteratively use the calculator tool and
-    benefits from OpenRouter's web-search plugin (RAG substitute).
+def _parse_rubric_judge_output(text: str, rubric: dict) -> tuple[float, list[dict]]:
+    """Parse the judge's JSON reply, clamp scores, and return (raw_total, breakdown).
 
-    Returns (final_text, tool_calls_log).
+    The judge call uses `response_format={"type": "json_object"}`, so we expect
+    pure JSON. We still try a fenced ```json``` fallback in case some provider
+    silently drops the param. Clamping is essential: LLM judges sometimes
+    award more than a criterion's max — we trust the rubric, not the judge.
+    """
+    # Primary path: pure JSON object (response_format enforced).
+    # Fallback: extract from a ```json``` fenced block if present.
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        m = re.search(r"```(?:json)?\s*\n(.*?)\n```", text, re.DOTALL | re.IGNORECASE)
+        if not m:
+            raise RubricJudgeParseError(
+                f"no parseable JSON in judge reply (got {len(text)} chars)")
+        try:
+            parsed = json.loads(m.group(1))
+        except json.JSONDecodeError as e:
+            raise RubricJudgeParseError(f"JSON decode failed: {e}")
+
+    breakdown = parsed.get("scores")
+    if not isinstance(breakdown, list) or not breakdown:
+        raise RubricJudgeParseError(f"missing or empty 'scores': {parsed!r}")
+
+    # Clamp each criterion score to [0, max_points].
+    max_by_id = {cr["id"]: float(cr["points"])
+                 for cat in rubric["categories"] for cr in cat["criteria"]}
+    for item in breakdown:
+        cid = item.get("id")
+        if cid in max_by_id:
+            try:
+                item["score"] = max(0.0, min(float(item.get("score", 0)), max_by_id[cid]))
+            except (TypeError, ValueError):
+                item["score"] = 0.0
+
+    # Recompute total from the clamped scores; clamp once more to the global cap.
+    raw_total = sum(item["score"] for item in breakdown
+                    if isinstance(item.get("score"), (int, float)))
+    return min(raw_total, float(rubric["total_points"])), breakdown
+
+
+# ---------------------------------------------------------------------------
+# Public entry points
+# ---------------------------------------------------------------------------
+async def call_model(cfg: ModelConfig, prompt: str) -> tuple[str, str]:
+    """Ask the model under test to answer `prompt`. Single HTTP call, no tools.
+
+    Returns `(content, finish_reason)`. `finish_reason == "length"` means the
+    model hit the `max_tokens` cap before finishing — the runner counts that
+    as a wrong answer (the model failed to produce a final answer in budget).
+
+    The SDK-level timeout (MODEL_CALL_TIMEOUT_S) raises openai.APITimeoutError
+    on overrun; the runner catches that as a cell-level error.
     """
     client = _get_client()
-    messages: list = [
-        {"role": "system", "content": MODEL_SYSTEM_PROMPT},
-        {"role": "user",   "content": prompt},
-    ]
-    tool_log: list = []
-    last_content = ""
-
-    for _ in range(MAX_TOOL_ITERATIONS):
-        resp = await client.chat.completions.create(
-            model=cfg.model_id,
-            temperature=0,
-            top_p=1.0,
-            max_tokens=8192,
-            messages=messages,
-            tools=[CALCULATOR_TOOL],
-            tool_choice="auto",
-            extra_body={"plugins": [WEB_PLUGIN]},
-        )
-        choice = resp.choices[0]
-        msg = choice.message
-        last_content = msg.content or ""
-
-        # No tool calls -> we're done.
-        if not getattr(msg, "tool_calls", None):
-            return last_content, tool_log
-
-        # Append the assistant message that contained tool_calls.
-        try:
-            messages.append(msg.model_dump(exclude_none=True))
-        except Exception:
-            # Fall back to a minimal dict if the SDK shape is unexpected.
-            messages.append({
-                "role": "assistant",
-                "content": msg.content,
-                "tool_calls": [
-                    {"id": tc.id, "type": "function",
-                     "function": {"name": tc.function.name,
-                                  "arguments": tc.function.arguments}}
-                    for tc in msg.tool_calls
-                ],
-            })
-
-        # Execute each tool call and append the result.
-        for tc in msg.tool_calls:
-            name = tc.function.name
-            args_raw = tc.function.arguments or "{}"
-            try:
-                args = json.loads(args_raw)
-            except json.JSONDecodeError:
-                args = {}
-            if name == "calculator":
-                result = _safe_calc(args.get("expression", ""))
-            else:
-                result = f"Error: unknown tool {name!r}"
-
-            tool_log.append({"tool": name, "arguments": args_raw, "result": result})
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": result,
-            })
-
-    # Hit iteration cap — return whatever the last assistant message was.
-    return (last_content or "[max tool iterations reached]"), tool_log
+    resp = await client.chat.completions.create(
+        model=cfg.model_id,
+        temperature=0,
+        top_p=1.0,
+        max_tokens=8192,
+        messages=[
+            {"role": "system", "content": MODEL_SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ],
+    )
+    # Some providers occasionally return a 200 with `choices=None` (e.g. upstream
+    # content filter rejection that the SDK doesn't surface as an exception).
+    # Treat as a re-runnable error rather than silently scoring 0.
+    if not resp.choices:
+        raise EmptyChoicesError(f"empty choices in response from {cfg.model_id}")
+    choice = resp.choices[0]
+    return (choice.message.content or "", choice.finish_reason or "stop")
 
 
-# ---------------------------------------------------------------------------
-# Judge (unchanged from v2.0)
-# ---------------------------------------------------------------------------
-async def judge_answer(question: str, expected: str, raw_response: str) -> tuple[bool, str, str]:
-    """LLM-as-judge for everything. One call decides extraction + correctness.
-
-    Returns (is_correct, extracted_answer, full_judge_text).
-    """
-    if not raw_response or not raw_response.strip():
+async def judge_answer(question: str, expected: str,
+                       raw_response: str) -> tuple[bool, str, str]:
+    """Binary judge. Returns (is_correct, extracted_answer, full_judge_text)."""
+    if not raw_response.strip():
         return False, "N/A", "model returned empty response"
 
     client = _get_client().with_options(timeout=JUDGE_CALL_TIMEOUT_S)
-    raw_excerpt = raw_response[-4000:] if len(raw_response) > 4000 else raw_response
-
     resp = await client.chat.completions.create(
         model=JUDGE_MODEL,
         temperature=0,
         top_p=1.0,
-        max_tokens=200,
+        max_tokens=1000,
         messages=[
             {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
-            {"role": "user", "content": (
-                f"题目：\n{question}\n\n"
-                f"标准答案：{expected}\n\n"
-                f"模型回复（完整，可能截尾）：\n{raw_excerpt}"
+            {"role": "user",   "content": (
+                f"Question:\n{question}\n\n"
+                f"Expected answer: {expected}\n\n"
+                f"Model response (head + tail; middle may be truncated):\n"
+                f"{_excerpt_for_judge(raw_response)}"
             )},
         ],
     )
     text = (resp.choices[0].message.content or "").strip()
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
 
-    if len(lines) >= 3:
-        verdict = lines[-1].upper()
-    elif len(lines) == 2:
-        verdict = lines[1].upper()
-    elif len(lines) == 1:
-        verdict = lines[0].upper()
-    else:
-        verdict = ""
+    if not lines:
+        raise BinaryJudgeParseError(
+            "binary judge returned empty reply (would have silently scored 0)")
 
-    if len(lines) >= 1:
-        extracted = lines[0]
-    else:
-        extracted = "N/A"
-
+    # Judge is asked for exactly 3 lines (extracted / reason / YES|NO).
+    # Be tolerant if it deviates: extracted = first line, verdict = last line.
+    extracted = lines[0]
+    verdict = lines[-1].upper()
     is_correct = verdict.startswith("YES")
     return is_correct, extracted, text
 
 
-async def judge_rubric_score(question: str, rubric: str,
-                             raw_response: str) -> tuple[int, str]:
-    """For answer_type='open': score model's reply against `rubric` on 1-10 scale.
-
-    Returns (score, full_judge_text). On parse failure returns (0, judge_text).
+async def judge_rubric_score(question: str, rubric: dict,
+                             raw_response: str) -> tuple[float, str, list]:
+    """Rubric judge. Returns (raw_total, full_judge_text, per_criterion_breakdown).
+    Raises RubricJudgeParseError if the judge's reply can't be parsed.
     """
-    if not raw_response or not raw_response.strip():
-        return 0, "model returned empty response"
+    if not raw_response.strip():
+        return 0.0, "model returned empty response", []
 
     client = _get_client().with_options(timeout=JUDGE_CALL_TIMEOUT_S)
-    raw_excerpt = raw_response[-4000:] if len(raw_response) > 4000 else raw_response
-
     resp = await client.chat.completions.create(
         model=JUDGE_MODEL,
         temperature=0,
         top_p=1.0,
-        max_tokens=300,
+        max_tokens=1500,
+        response_format={"type": "json_object"},   # forces pure JSON reply
         messages=[
             {"role": "system", "content": RUBRIC_JUDGE_SYSTEM_PROMPT},
-            {"role": "user", "content": (
-                f"题目：\n{question}\n\n"
-                f"评分 Rubric：\n{rubric}\n\n"
-                f"模型回复（完整，可能截尾）：\n{raw_excerpt}"
+            {"role": "user",   "content": (
+                f"Question:\n{question}\n\n"
+                f"Rubric:\n{json.dumps(rubric, indent=2, ensure_ascii=False)}\n\n"
+                f"Model response (head + tail; middle may be truncated):\n"
+                f"{_excerpt_for_judge(raw_response)}"
             )},
         ],
     )
     text = (resp.choices[0].message.content or "").strip()
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-
-    # Extract integer 1-10 from the last line (be tolerant of stray punctuation).
-    import re
-    score = 0
-    if lines:
-        m = re.search(r"\b(10|[1-9])\b", lines[-1])
-        if m:
-            score = int(m.group(1))
-    score = max(0, min(10, score))   # clamp defensively
-    return score, text
-
-
-def has_api_key() -> bool:
-    return bool(os.environ.get("OPENROUTER_API_KEY"))
+    raw_total, breakdown = _parse_rubric_judge_output(text, rubric)
+    return raw_total, text, breakdown

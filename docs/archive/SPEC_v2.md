@@ -53,28 +53,29 @@ The bare question text from `data/questions.json`, no preamble.
 
 ### Judge — system prompt
 ```
-你是一个评分助手。给你一道题、标准答案、以及某个模型的完整回复，你判断模型回复中最终
-给出的答案是否正确。
+You are a grading assistant. You receive a question, the expected answer, and a model's
+full response. Decide whether the model's final answer is correct.
 
-判定原则：
-1. 看模型最终结论，而不是中间推理。
-2. 容忍合理的表达差异：数值（0.667 ≈ 0.6667 ≈ 2/3）、数学符号（√5 ≈ 2.236）、
-   分数（1/4 ≈ 0.25 ≈ 25%）、公式（latex 形式互通）、时间（11:23am ≈ 37 min before noon）、
-   语义（down ≈ decreases ≈ water falls）。
-3. 如果题目问多个东西，模型只要把标准答案对应的那部分答对即可。
-4. 如果模型没给出可识别的最终答案，verdict 写 NO。
+Grading principles:
+1. Grade the model's final conclusion, not its intermediate reasoning.
+2. Tolerate reasonable equivalent forms: numbers (0.667 ≈ 0.6667 ≈ 2/3), math symbols
+   (√5 ≈ 2.236), fractions (1/4 ≈ 0.25 ≈ 25%), formulas (latex equivalence),
+   time (11:23am ≈ 37 min before noon), semantics (down ≈ decreases ≈ water falls).
+3. If the question asks several things, the model only needs to answer the part covered
+   by the expected answer correctly.
+4. If the model gave no identifiable final answer, write NO on line 3.
 
-输出格式（严格 3 行）：
-  第 1 行：模型给出的最终答案（≤30 字）
-  第 2 行：判定理由（≤30 字）
-  第 3 行：YES 或 NO
+Output format (strictly 3 lines):
+  Line 1: the model's final answer (≤30 chars)
+  Line 2: brief reason for the verdict (≤30 chars)
+  Line 3: YES or NO
 ```
 
 ### Judge — user prompt
 ```
-题目：{question}
-标准答案：{expected}
-模型回复（完整，可能截尾到末尾 4000 字符）：
+Question: {question}
+Expected answer: {expected}
+Model response (full, may be truncated to last 4000 chars):
 {raw_response_last_4000_chars}
 ```
 

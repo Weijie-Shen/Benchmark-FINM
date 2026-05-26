@@ -1,57 +1,94 @@
-# Quant Interview Benchmark — v3.2 Specification
+# Quant Interview Benchmark — v3.7 Specification
 
-**Status**: locked. Any change to the items below requires a version bump.
-**Spec date**: 2026-05-21.
+**Status**: locked. Any change to the items below requires a version bump per §10.
+**Spec date**: 2026-05-25.
 
-## v3.2 changelog (vs v3.1)
-- **No thresholding for rubric questions**. The rubric_score (1-10) is **multiplied by `RUBRIC_WEIGHT = 0.1`** and added directly to the total. Max contribution per question = 1.0 (same as a correct binary question).
-- New Result field `score: float` (0.0-1.0) is the actual contribution to the total. `correct: bool | None` is now `None` for rubric questions (binary correctness no longer applies to graded-on-a-scale answers).
-- `RUBRIC_PASS_THRESHOLD` removed; `RUBRIC_WEIGHT` replaces it.
-- `wrong_ids` in summary renamed to `missed_ids` (any question where `score < 1.0`).
-- Summary now includes a `per_category` breakdown (sums per `topic`) for each model.
-
-## v3.1 changelog (vs v3.0) — historical
-- Rubric judge path added for `answer_type: "open"` questions.
-- New `rubric_score` field on Result.
-
-## Why v3.0 (vs v2.0)
-
-v2.0 measured **native reasoning** — all tools disabled. v3.0 turns the tools on so we can A/B against the v2.0 baseline and see how much tool use helps.
-
-| v2.0 | v3.0 |
-|---|---|
-| No tools — pure native reasoning | Calculator (function calling) + web search (OpenRouter plugin) |
-| Single model call per question | Multi-turn: model may iterate up to 8 tool calls before final answer |
-| `tool_calls` field absent on Result | Each tool invocation logged: name, arguments, result |
-| Cost ~$1–2 per run | Estimated ~$3–6 per run (web search markup + multi-turn) |
-
-Results from v2.0 and v3.0 are not directly comparable in absolute terms. The *delta* between them is the interesting signal: how much does tool access raise each model's score, and on which questions.
-
-> ⚠️ **Web search makes classic problems trivially solvable.** Many of our 26 questions appear on quant interview prep sites; a model that uses web search effectively will look up the canonical answer. v3.0 scores are expected to be much higher and likely cluster near the top, reducing model discrimination — that's the point of running this side-by-side with v2.0.
+This document describes the current locked experimental conditions. For the
+history of how we got here (v3.0 tool support, v3.4 judge switch, v3.6 tool
+disable, v3.7 robustness fixes, etc.), see [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## 1. Models
 
-Same 10 as v2.0. `supports_temperature=False` for the 3 reasoning models (claude-opus-4.7-fast, gpt-5.5, gpt-chat-latest); their sampling is still uncontrolled. All 10 models advertise `tools` + `tool_choice` support per OpenRouter's catalog (verified 2026-05-20).
+10 models, all reached via OpenRouter with one API key. The full list lives in
+[`pipeline/models.py`](../pipeline/models.py). The lineup deliberately mixes
+seven 2026-era frontier models with three older / weaker baselines (`gpt-4`,
+`claude-3-haiku`, `gemini-2.5-flash`) so the SOTA gap is visible on the same
+questions.
+
+1 of the 10 (`gpt-5.5`) silently ignores the sampling parameters we send.
+Its rows record `sampling_controlled=false` so the comparison can be
+qualified.
 
 ---
 
 ## 2. Prompts
 
-### Model under test — system prompt (changed from v2.0)
+All three prompts live in [`pipeline/prompts.py`](../pipeline/prompts.py).
+Edit there, not in code.
+
+### Model under test — system prompt
 ```
-You are answering a quantitative-finance interview question. Think step by step.
-You have access to a `calculator` tool for arithmetic and to live web search
-(used automatically by the runtime when helpful). Use these tools whenever they
-reduce error. After your reasoning, clearly state your final answer at the end.
+You are answering a challenging quantitative interview question. Think step by step.
+After your reasoning, clearly state your final answer at the end.
 ```
 
 ### Model under test — user prompt
-Bare question text from `data/questions.json`, no preamble.
+Bare question text from `data/<category>.json`, no preamble.
 
-### Judge — unchanged from v2.0
-Same Claude Sonnet 4.6 judge prompt and the same 3-line output format (extracted / reason / YES-NO).
+### Model output contract — `Final Answer:` line
+
+Every model is instructed to end its reply with a line of the form:
+
+```
+Final Answer: <committed answer>
+```
+
+or, if it cannot solve the problem:
+
+```
+Final Answer: I don't know
+```
+
+This contract exists so the binary judge has a deterministic anchor for
+extraction. Without it, judges have to guess where a long reasoning trace
+commits to a final value — which produced silent mis-grades in earlier runs
+(judge returns empty, model gets a false 0). The judge looks for the LAST
+`Final Answer:` occurrence first; only if missing does it scan the tail of
+the response.
+
+If the model hits `max_tokens` before writing the Final Answer line
+(`finish_reason == "length"`), the cell is scored 0 and labeled
+`extracted_answer="[truncated]"` — no judge call. This is a model-quality
+failure, not a re-runnable pipeline error.
+
+### Single prompt across all 5 categories — by design
+
+We deliberately do **not** use category-specific system prompts (probability
+vs brainteaser vs arithmetic vs coding vs finance). Reasons:
+
+1. **Prompt quality becomes a hidden variable.** If our probability prompt is
+   sharper than our finance prompt, score gaps reflect prompt engineering,
+   not model ability. Reviewers cannot distinguish the two.
+2. **Cross-model fairness.** Different model families respond differently to
+   prompt style. A single neutral prompt removes the temptation to over-fit
+   prompts to one vendor's preference.
+3. **Real-world deployment uses one prompt.** Users don't switch prompts by
+   topic; benchmarking should mirror that.
+4. **Modern LLMs auto-detect topic.** Seeing `P(A|B)` or a function signature
+   is enough cue for the model to switch frameworks; explicit hints are
+   redundant.
+
+This aligns with MMLU / GSM8K / MATH / HumanEval / MT-Bench, all of which use
+a single prompt across heterogeneous tasks. Changing this rule requires a
+v4.0 bump.
+
+### Judge prompts
+- Binary judge (§6.1) — 3-line plain-text output.
+- Rubric judge (§6.2) — JSON object (enforced by `response_format`).
+
+Judge model: `deepseek/deepseek-v4-pro` for both paths.
 
 ---
 
@@ -59,77 +96,73 @@ Same Claude Sonnet 4.6 judge prompt and the same 3-line output format (extracted
 
 | Parameter | Value | Notes |
 |---|---|---|
-| `temperature` | 0.0 | Honored by 7 of 10 models |
+| `temperature` | 0.0 | Honored by 9 of 10 models |
 | `top_p` | 1.0 | Same |
-| `max_tokens` | 8192 | Per turn |
+| `max_tokens` (model) | 8192 | `finish_reason == "length"` → cell scored 0, no judge call |
+| `max_tokens` (binary judge) | 1000 | Headroom for reasoning judges (deepseek-v4-pro) |
+| `max_tokens` (rubric judge) | 1500 | Same |
 | `seed` | not set | |
-| `tools` | `[calculator]` | Function-calling protocol enabled |
-| `tool_choice` | `"auto"` | Model decides when to invoke |
-| `plugins` | `[{"id": "web", "max_results": 5}]` | OpenRouter web-search RAG substitute |
+| `tools` | **not passed** | See §4 |
+| `plugins` | **not passed** | See §4 |
 | Reasoning effort | Model default | |
-| Sampling strategy | Single pass | No majority vote |
-| Per-HTTP-call timeout (model) | 120s | One turn (one HTTP roundtrip to OpenRouter) |
-| **Total answering time per question** | **120s** | Hard cap across ALL tool-loop iterations for a single (model, question). If exceeded, cell recorded as `error: TimeoutError`. |
-| Per-call timeout (judge) | 60s | unchanged |
-| `MAX_TOOL_ITERATIONS` | **8** | After 8 calculator calls, runtime forces the model to produce a final answer |
+| Sampling strategy | Single pass | No majority vote, no tool loop |
+| Per-HTTP-call timeout (model) | 120s | SDK raises `APITimeoutError` on overrun |
+| Per-HTTP-call timeout (judge) | 60s | |
+| SDK retries on 5xx / 429 / connection error | 3 | Exponential backoff |
 
 ---
 
-## 4. Tool permissions (v3.0 NEW)
+## 4. Tools — all disabled
 
-| Tool | v3.0 | Notes |
-|---|---|---|
-| `calculator` (function call) | ✅ Enabled | Sandboxed Python eval over a restricted namespace (math fns + constants). Blocks `__`, `import`, `exec`, `eval`, `open`. |
-| Web search | ✅ Enabled | OpenRouter's universal `plugins=[{"id": "web"}]`. Adds ~$0.004 per request. Acts as **RAG substitute** — no project-specific corpus is wired in. |
-| Python code execution (arbitrary) | ❌ Disabled | Only the calculator subset is allowed |
-| Function calling (general) | ✅ Protocol enabled | But the only function defined is `calculator` |
-| Local RAG over a corpus | ❌ Not implemented | Would require a project-specific knowledge base; web plugin is the practical substitute |
+| Tool | Status |
+|---|---|
+| Calculator (function call) | ❌ Disabled |
+| Web search | ❌ Disabled |
+| Python code execution | ❌ Disabled |
+| Function calling (`tools` param) | ❌ Disabled |
+| Local RAG | ❌ Not implemented |
 
-### Calculator surface area
-
-Supported functions/constants (whitelist):
-```
-abs, min, max, round, pow, sum,
-sqrt, log, ln, log2, log10, exp,
-sin, cos, tan,
-factorial, comb, perm,
-ceil, floor,
-pi, e
-```
-
-Anything else (e.g., `sympy`, file IO, network) returns `Error: ...`.
+The benchmark measures **native reasoning** — the model answers from its own
+parametric knowledge only. To experiment with tools, see the v3.0–v3.5 entries
+in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## 5. Dataset
 
-Target structure: **5 categories × 10 questions = 50 total**.
+Target: **5 categories × 10 questions = 50 total**.
 
 | Category | `topic` value | Question style | Grading |
 |---|---|---|---|
 | Probability | `"probability"` | Word problems, distributions, expectations | Binary |
 | Brain teaser | `"brainteaser"` | Classic puzzles | Binary |
 | Arithmetic | `"arithmetic"` | Mental math, estimation | Binary |
-| Coding | `"coding"` | Short coding/algorithm questions | Binary |
-| Finance | `"finance"` | Open-ended valuation / market questions | **Rubric (1-10)** |
+| Coding | `"coding"` | Short coding / algorithm questions | Binary |
+| Finance | `"finance"` | Open-ended valuation / market questions | **Rubric (1–10)** |
 
-Only **finance** uses `answer_type: "open"` (rubric grading). All other categories use binary grading (number / string / choice / unspecified).
+Only **finance** uses `answer_type: "open"` (rubric grading). All other
+categories use binary grading (`number`, `string`, `choice`, or unspecified).
 
-**Currently incomplete**: 11 brainteaser + 15 probability = 26 questions; arithmetic, coding, finance categories are TBD. Pipeline runs regardless of completeness — once finance questions are added, the rubric path activates automatically.
-
-Per-question schema:
+Per-question schema (binary):
 ```json
 {
-  "id": "f01",
-  "topic": "finance",
-  "difficulty": "medium",
-  "question": "...",
-  "answer": "9-10: ... / 7-8: ... / 4-6: ... / 1-3: ...",   // rubric for finance
-  "answer_type": "open"                                       // triggers rubric path
+  "id": "b01",
+  "topic": "brainteaser",
+  "question": "How many trailing zeros in 100! ?",
+  "answer": "24",
+  "answer_type": "number"
 }
 ```
 
-Required fields: `id`, `question`, `answer`. Same hard-do-not-paraphrase rule.
+Per-question schema (open / rubric): see §6.2 below and
+[`data/finance.json`](../data/finance.json) for a worked example.
+
+Required fields: `id`, `question`, `answer`. **Do not paraphrase or "clarify"
+a question before adding it.** If a question is ambiguous, that ambiguity is
+part of the test. Only fix encoding (`Ã` → `×`) and JSON-syntax errors.
+
+The pipeline runs regardless of how many questions are populated — once a
+category is filled in, it just appears in the output.
 
 ---
 
@@ -137,61 +170,131 @@ Required fields: `id`, `question`, `answer`. Same hard-do-not-paraphrase rule.
 
 ### 6.1 Binary judge (answer_types: `number`, `string`, `choice`, or unspecified)
 
-Single Claude Sonnet 4.6 call per (model, question). The judge sees the model's **final-turn content** as the raw response, not the intermediate tool messages. Returns 3-line response:
-  - line 1: extracted answer (≤30 chars)
-  - line 2: reason (≤30 chars)
-  - line 3: YES or NO
+Single `deepseek/deepseek-v4-pro` call per `(model, question)`. The judge sees
+the question, the expected answer, and the model's response (head + tail
+excerpt if oversized — see §6.3). It is instructed to:
 
-`correct = (line 3 == YES)`. Stored in `judge_reasoning`. Same as v2.0 / v3.0.
+1. Find the LAST `Final Answer:` line in the response and use what follows
+   as the committed answer.
+2. If none exists, scan only the last ~15 lines for a committed answer
+   (often a `\boxed{...}` value or a bold final sentence).
+3. If the model wrote `I don't know`, grade as incorrect.
 
-### 6.2 Rubric judge (answer_type: `open`) — **v3.1 added, v3.2 changed scoring**
+The judge returns 3 plain-text lines:
+
+- line 1: extracted answer (≤40 chars)
+- line 2: reason (≤40 chars)
+- line 3: `YES` or `NO`
+
+`correct = (line 3 == "YES")`. Full text stored in `judge_reasoning`.
+Contribution to total: `1.0` if correct else `0.0`.
+
+If the judge returns an empty / unparseable reply, `BinaryJudgeParseError`
+is raised and the cell is recorded as a re-runnable error (not as the model
+scoring 0). The parser otherwise tolerates ≠3 lines by taking `extracted =
+first line`, `verdict = last line`.
+
+### 6.2 Rubric judge (answer_type: `open`)
 
 When `answer_type == "open"`:
 
-- The `answer` field is **not** a single answer; it is a **rubric** (text) describing what makes a 9-10 / 7-8 / 4-6 / 1-3 answer.
-- A separate Claude Sonnet 4.6 call (`judge_rubric_score`) is made instead of the binary judge.
-- The rubric judge returns:
-  - line 1: short summary of model's response
-  - line 2: reasoning (which rubric points hit / missed)
-  - line 3: a single integer 1-10
-- `rubric_score = int(line 3)` (clamped to 0-10; defaults to 0 on parse failure).
+- The `answer` field is a **structured rubric** (JSON object), not a free-form
+  string.
+- A separate `judge_rubric_score` call replaces the binary judge.
+- The judge sees the question, the rubric, and the model's full reply (head +
+  tail excerpt if oversized). It scores each criterion individually, emitting
+  a JSON object — enforced via `response_format={"type": "json_object"}`.
+- Parser clamps each criterion's score to its declared max (defensive), then
+  sums to get `raw_total`.
+- **Contribution to total = `raw_total / rubric.total_points`** — so any
+  rubric scale (5, 10, 100, anything) normalizes to a 0.0-1.0 contribution.
+  Default total is 10.
 
-**Scoring (v3.2)**: no threshold. The rubric_score is multiplied by `RUBRIC_WEIGHT = 0.1` and that value (0.0-1.0) is added directly to the model's total.
+If the judge reply can't be parsed (no JSON, malformed JSON, empty `scores`),
+`RubricJudgeParseError` is raised; the row is recorded as a re-runnable error
+(not as the model scoring 0).
 
-| `rubric_score` | contribution to total |
-|---|---|
-| 10 | 1.0 |
-| 7 | 0.7 |
-| 5 | 0.5 |
-| 1 | 0.1 |
-| 0 (parse failure / no answer) | 0.0 |
-
-`Result.correct` is set to `None` for rubric questions (the binary correct/wrong concept doesn't apply). The leaderboard is sorted by `score_total` (sum of all `Result.score`), not by count of binary correct.
-
-### Why 0.1 weight
-
-Goal: every category contributes the same max points to the total. With 5 categories × 10 questions each, and binary questions worth max 1.0 each, the only way to keep finance equal to the others is to scale its 1-10 rubric down to 0.1-1.0 per question. Hence `RUBRIC_WEIGHT = 1 / max_rubric_value = 0.1`.
-
-If you ever change the rubric scale (e.g., to 1-5), update both `RUBRIC_WEIGHT` and the rubric judge prompt's anchor descriptions.
-
-### How to write a rubric in `data/questions.json`
-
-The `answer` field for an open-type question should be a single string with explicit score bands. Example:
+#### Rubric schema (data side)
 
 ```json
 {
-  "id": "b12",
-  "question": "Walk me through how you'd price a European call option.",
+  "id": "f01",
+  "topic": "finance",
   "answer_type": "open",
-  "answer": "9-10: Names Black-Scholes-Merton with all 5 inputs (S, K, T, r, σ); explains role of N(d1), N(d2); mentions risk-neutral pricing; acknowledges core assumptions (lognormal, constant σ, no dividends).\n7-8: BSM + most inputs and key intuition, may miss one assumption.\n4-6: Vague BSM mention or only some inputs; no risk-neutral or assumptions.\n1-3: Wrong framework or no quantitative content."
+  "question": "...",
+  "answer": {
+    "total_points": 10,
+    "categories": [
+      {
+        "name": "Section name",
+        "max_points": 5,
+        "criteria": [
+          {
+            "id": "short_slug",
+            "name": "Human-readable name",
+            "points": 2,
+            "description": "What the answer must contain to earn these points.",
+            "trap": "Optional. Common error — if the model commits this, award 0 for this criterion."
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-Bad rubrics (vague, missing bands) will make the judge inconsistent — that's on the dataset author.
+`points` may be integer or float (0.5 increments work well; smaller values
+produce judge noise).
 
-### Score contribution
+Validator enforces:
+- `total_points == sum(category.max_points)` (float-epsilon comparison)
+- For each category: `max_points == sum(criterion.points)`
+- Criterion ids unique within a question
 
-The rubric judge's raw 1-10 score is multiplied by `RUBRIC_WEIGHT = 0.1` (in `pipeline/clients.py`) to produce a 0.1-1.0 contribution to the model's total. **No threshold** — partial credit is preserved. If you ever change the rubric scale (e.g. to 1-5), update both `RUBRIC_WEIGHT` and the rubric judge prompt's anchor descriptions, and bump v3.x.
+#### Judge output (JSON)
+
+```json
+{
+  "scores": [
+    {"id": "identical_prices_verdict", "score": 2,   "comment": "Stated clearly"},
+    {"id": "risk_neutral_measure",     "score": 1,   "comment": "Vague"},
+    {"id": "drift_replaced_by_r",      "score": 0.5, "comment": "Partial"}
+  ],
+  "total": 3.5,
+  "summary": "<≤60 char overall verdict>"
+}
+```
+
+The judge's `total` field is **ignored** — we recompute from the clamped
+breakdown. Full judge text is stored in `Result.judge_reasoning`; the parsed
+per-criterion list in `Result.rubric_breakdown`.
+
+`Result.correct` is `None` for rubric questions (binary correctness doesn't
+apply). The leaderboard sorts by `score_total = sum(Result.score)`.
+
+#### How to write a good rubric
+
+1. **Keep 2–4 categories**, not more — judge attention dilutes.
+2. **Keep each category to 2–4 criteria** — same reason.
+3. **Use point weights that reflect importance.** Verdict-style criteria
+   (the bottom-line conclusion) should outweigh supporting concepts.
+4. **Use 0.5 increments** for fine differentiation; avoid arbitrary fractions
+   like 1.3.
+5. **Write `description` to be checkable**: "Explicitly states X" beats
+   "Demonstrates understanding of X".
+6. **Use `trap` for known LLM failure modes** — calling them out lets the
+   judge proactively penalize.
+7. **Bad rubrics → noisy judge scores.** Quality is on the dataset author.
+
+See [`data/finance.json`](../data/finance.json) for a worked example
+(Black-Scholes / jumps question).
+
+### 6.3 Judge excerpt policy
+
+When the model's raw response exceeds `head + tail + 64` chars (defaults:
+4000 + 4000), the middle is dropped and replaced with a marker. This keeps
+the judge from missing a final answer placed near the top of a long reasoning
+trace.
 
 ---
 
@@ -199,59 +302,75 @@ The rubric judge's raw 1-10 score is multiplied by `RUBRIC_WEIGHT = 0.1` (in `pi
 
 | Setting | Value |
 |---|---|
-| Call granularity | 1+ model calls per question (multi-turn if tools invoked) + 1 judge call |
-| Question order | ID-sorted |
-| Retry policy | None in v3.0 |
+| Call granularity | 1 model call + 1 judge call per `(model, question)` |
+| Question order | File order (concatenated per-category JSONs) |
 | Concurrency | 8 (configurable via `--concurrency`) |
-| Output format errors | If judge returns < 3 lines, parse defensively; verdict defaults to NO |
+| Retry policy | SDK-level: 3 retries on 5xx / 429 / connection error |
+| Crash safety | Each completed Result appended to `details_<ts>.jsonl` under a lock |
+| Judge parse fallback | Binary: if reply isn't 3 lines, use first / last lines |
 
 ### Logged fields per (model, question) row
 
 | Field | Description |
 |---|---|
 | `model` | Display name from `pipeline/models.py` |
-| `question_id` | Question ID |
-| `correct` | Boolean — judge's YES/NO |
-| `extracted_answer` | Judge's line 1 — model's final answer |
-| `expected_answer` | Dataset's reference answer |
-| `raw_response` | Final-turn assistant text |
-| `judge_reasoning` | Full 3-line judge response |
-| `latency_s` | Wall-clock seconds for the entire model exchange (all turns) |
-| `sampling_controlled` | False for the 3 reasoning models |
-| `tool_calls` | **v3.0 NEW** — list of `{tool, arguments, result}` dicts. `null` if no tools used. |
-| `rubric_score` | **v3.1 NEW** — integer 1-10 for `answer_type=open` questions only; `null` for all other types. |
-| `score` | **v3.2 NEW** — float 0.0-1.0, the contribution to the model's total (1.0 for binary correct, 0.0 for binary wrong, `rubric_score * 0.1` for rubric). |
-| `correct` | Boolean for non-rubric; **v3.2: `null` for rubric** (binary correctness doesn't apply to graded-on-scale answers). |
-| `error` | Error type + message, or null |
+| `question_id` | Question id |
+| `score` | Float 0.0–1.0, contribution to the model's total |
+| `correct` | Boolean for binary; `null` for rubric |
+| `extracted_answer` | Binary: judge's line 1. Rubric: `"rubric:N/M"`. Truncated model output: `"[truncated]"` |
+| `expected_answer` | String for binary; rubric dict for open |
+| `raw_response` | Model's full reply |
+| `judge_reasoning` | Full judge text |
+| `latency_s` | Wall-clock seconds for the model call |
+| `sampling_controlled` | `false` for the 1 model that ignores `temperature`/`top_p` |
+| `rubric_score` | Raw rubric total (0..total_points) for open; `null` otherwise |
+| `rubric_breakdown` | List of `{id, score, comment}` per criterion for open; `null` otherwise |
+| `error` | `"ExceptionType: message"`, or `null` |
 
 ### Output files (per run, timestamped)
 
-Same three files as v2.0. The new `tool_calls` field appears in `details_<ts>.json`; CSV and summary are unchanged in schema.
+| File | Contents |
+|---|---|
+| `details_<ts>.json` | All Result rows, full info |
+| `details_<ts>.jsonl` | Same rows, appended incrementally as each cell completes (crash-safe) |
+| `summary_<ts>.json` | Per-model totals + per-category breakdown + `missed_ids` / `error_ids` |
+| `scores_<ts>.csv` | Model × question matrix, sorted by total |
 
 ---
 
 ## 8. How to run
 
 ```bash
-LLM/bin/python run_benchmark.py
+LLM/bin/python run_benchmark.py                       # full dataset
+LLM/bin/python run_benchmark.py --questions data/finance.json   # one category
 ```
 
-Estimated cost: **$3–6** per run (vs $1–2 in v2.0). Estimated wall time: **45–90 minutes** depending on how many tool roundtrips each model makes.
+Estimated cost: **$0.50–$1.50** per full 10-model × 50-question run.
+Estimated wall time: **5–30 minutes** at default concurrency 8.
 
 ---
 
-## 9. Known v3.0 limitations
+## 9. Known limitations
 
-1. **Web search makes classic problems trivially solvable** — many questions are on quant prep sites. Expect score ceilings clustered near 100%.
-2. **Calculator is permissive** — sandbox blocks the obvious dangerous tokens but is not a hardened jail. Don't expose this to untrusted input.
-3. **Tool loop iteration cap (8)** and **2-minute total answering cap** — extremely tool-heavy or slow models are cut short. A model that needs more than 2 minutes of wall time (across all tool turns) gets that cell recorded as a `TimeoutError`.
-4. **No corpus RAG** — "RAG" in v3.0 = web search. If you want retrieval over project-specific documents (papers, textbook excerpts), provide a corpus and we'll wire a real retriever.
-5. **Web plugin cost is non-trivial** — at ~$0.004/call × 260 calls = ~$1 extra, plus the model token cost goes up because more context is injected.
-6. **All v2.0 limitations still apply** — small sample, no retry, judge as single point of failure, 3 models with uncontrolled sampling.
-7. **Rubric scoring uses the same model as binary scoring (Sonnet 4.6)** — no independence. Systematic bias in Sonnet's interpretation of rubrics won't be caught by cross-checking against itself. v3.x roadmap: rubric judge should be a different model (e.g., Opus) for triangulation.
-8. **`RUBRIC_WEIGHT = 0.1` is hard-coded** — tied to the 1-10 scale described in the judge prompt. Changing the rubric scale requires updating both.
-9. **Current dataset has zero `answer_type: "open"` questions** — the rubric path is implemented but dormant until finance questions are added.
-10. **`Result.correct` becomes a partial signal** — only meaningful for non-rubric questions. Downstream analysis should sum `Result.score` (always 0.0-1.0) and ignore `correct` for rubric rows.
+1. **Small sample.** 50 target questions is enough for ranking, not for
+   tight per-category statistical claims.
+2. **Single judge model.** Every grading decision routes through
+   `deepseek-v4-pro`. Audit `judge_reasoning` before publishing a
+   leaderboard. Same-vendor pair (`deepseek-v4-flash` in the lineup, judged
+   by `deepseek-v4-pro`) is a potential bias source.
+3. **No tools, no multi-sample.** The benchmark measures one configuration.
+   Real deployments differ.
+4. **Training-data leakage risk.** Many classic interview questions appear
+   on prep sites, so models may be remembering rather than reasoning. No
+   defense against this in the current spec.
+5. **1 model has uncontrolled sampling.** Flagged via
+   `sampling_controlled=false` per row, but the comparison is inherently
+   noisier for those models.
+6. **Rubric judge can over-award.** Mitigated by clamping each criterion to
+   its declared max and ignoring the judge's `total` field, but not eliminated.
+7. **`Result.correct` is a partial signal.** Meaningful for binary rows only.
+   Downstream analysis should sum `Result.score` (always 0.0–1.0) and ignore
+   `correct` for rubric rows.
 
 ---
 
@@ -261,7 +380,8 @@ Estimated cost: **$3–6** per run (vs $1–2 in v2.0). Estimated wall time: **4
 |---|---|
 | Add or remove a model from the lineup | v3.x |
 | Add or edit dataset questions | v3.x |
-| Add a new tool or change tool permissions | **v4.0** |
-| Change prompt, sampling params, scoring rule | **v4.0** |
 | Add new logged field that doesn't alter behavior | v3.x |
-| Change `RUBRIC_WEIGHT` or rubric scale | v3.x |
+| Pipeline robustness / error-handling fixes | v3.x |
+| Add a new tool or change tool permissions | **v4.0** |
+| Change prompt, sampling params, or scoring rule | **v4.0** |
+| Change rubric schema or judge output format | **v4.0** |

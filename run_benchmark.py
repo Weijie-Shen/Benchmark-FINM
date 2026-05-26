@@ -24,8 +24,9 @@ from pipeline.runner import run_benchmark
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--questions", default="data/questions.json",
-                   help="path to questions JSON (default: data/questions.json)")
+    p.add_argument("--questions", default="data",
+                   help="path to questions JSON file OR directory of files "
+                        "(default: data/ — loads all *.json in it)")
     p.add_argument("--out", default="results",
                    help="output directory (default: results/)")
     p.add_argument("--concurrency", type=int, default=8,
