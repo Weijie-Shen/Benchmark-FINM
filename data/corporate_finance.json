@@ -1,0 +1,84 @@
+[
+  {
+    "id": "cf01",
+    "topic": "corporate_finance",
+    "question": "Which of the following represents potential benefits and drawbacks of going public for SpaceX? Select all that apply.\n\nA. Access to large-scale capital\nB. Increased short-term performance pressure\nC. Elimination of governance constraints\nD. Greater liquidity for employees\nE. Reduced need for strategic discipline",
+    "answer": [
+      "A",
+      "B",
+      "D"
+    ],
+    "answer_type": "choice"
+  },
+  {
+    "id": "cf02",
+    "topic": "corporate_finance",
+    "question": "SpaceX conducts insider share sales at ~$420/share to 'level-set' valuation ahead of IPO. What is the primary economic function of this?\n\nA. Raising capital for operations\nB. Providing a credible market-based signal of valuation\nC. Reducing volatility in public markets\nD. Avoiding SEC disclosure requirements",
+    "answer": "B",
+    "answer_type": "choice"
+  },
+  {
+    "id": "cf03",
+    "topic": "corporate_finance",
+    "question": "Neom executives used overly optimistic assumptions and shielded leadership from bad news. What is the core failure?\n\nA. Lack of capital\nB. Poor engineering execution\nC. Principal-agent problem with distorted information flow\nD. Insufficient demand forecasting",
+    "answer": "C",
+    "answer_type": "choice"
+  },
+  {
+    "id": "cf04",
+    "topic": "corporate_finance",
+    "question": "Which factors contributed to Neom's challenges? Select all that apply.\n\nA. Unrealistic assumptions in financial models\nB. Information asymmetry between leadership and operators\nC. Excessively conservative planning\nD. Incentives to justify continued investment\nE. Lack of initial funding",
+    "answer": [
+      "A",
+      "B",
+      "D"
+    ],
+    "answer_type": "choice"
+  },
+  {
+    "id": "cf05",
+    "topic": "corporate_finance",
+    "question": "Which best explains why SpaceX's ambitious projects may be more credible than Neom's?\n\nA. SpaceX operates in a smaller market\nB. SpaceX has demonstrated execution capability and cash flow generation\nC. Neom is a public company\nD. SpaceX faces no technical challenges",
+    "answer": "B",
+    "answer_type": "choice"
+  },
+  {
+    "id": "cf06",
+    "topic": "corporate_finance",
+    "question": "Which conditions increase the probability that large, visionary projects succeed? Select all that apply.\n\nA. Strong feedback loops\nB. Transparent information flow\nC. Unlimited capital with no accountability\nD. Proven intermediate milestones\nE. Leadership insulated from bad news",
+    "answer": [
+      "A",
+      "B",
+      "D"
+    ],
+    "answer_type": "choice"
+  },
+  {
+    "id": "cf07",
+    "topic": "corporate_finance",
+    "question": "Calculate the future value if you invest $100,000 today at 10% annually for 7.2 years. (Hint: think about the 'rule of 72'.) Show your work.",
+    "answer": 198622,
+    "answer_type": "number"
+  },
+  {
+    "id": "cf08",
+    "topic": "corporate_finance",
+    "question": "Calculate the future value if you invest $100,000 today at 4.5% annually for 16 years. (Hint: think about the 'rule of 72'.) Show your work.",
+    "answer": 202237,
+    "answer_type": "number"
+  },
+  {
+    "id": "cf09",
+    "topic": "corporate_finance",
+    "question": "Calculate the future value if you invest $100,000 today at 8.0% annually for 9 years. (Hint: think about the 'rule of 72'.) Show your work.",
+    "answer": 199900,
+    "answer_type": "number"
+  },
+  {
+    "id": "cf10",
+    "topic": "corporate_finance",
+    "question": "Calculate the future value if you invest $100,000 today at 9.0% annually for 8 years. (Hint: think about the 'rule of 72'.) Show your work.",
+    "answer": 199256,
+    "answer_type": "number"
+  }
+]

@@ -14,15 +14,24 @@ You are answering a quantitative reasoning question. Think step by step.
 FINAL ANSWER FORMAT (mandatory):
 - The very last line of your response MUST begin with "Final Answer:" followed
   by your committed answer.
-- Commit to one answer. Do not list multiple candidates.
 - Nothing may come after the Final Answer line.
+- Do not hedge with multiple competing candidates — pick one answer set and
+  commit.
 - If you cannot solve the problem, the last line must be exactly:
       Final Answer: I don't know
 
-Examples (form only — these are not hints to any specific question):
+Multiple-choice questions:
+- The number of correct options is NOT announced. Every multiple-choice
+  question is potentially multi-select — select EVERY option that applies
+  (could be one, could be several).
+- Format your committed set as comma-separated letters, e.g.
+  "Final Answer: A, B, D" for multi-select or "Final Answer: B" for single.
+
+Examples (form only — not hints to any specific question):
     Final Answer: 42
     Final Answer: a^2 + b^2
     Final Answer: Yes; there are exactly 7 valid configurations.
+    Final Answer: A, B, D
     Final Answer: I don't know
 """
 
@@ -70,7 +79,13 @@ Grading rules:
 5. Multi-fact expected answers: when the expected answer contains more than
    one distinct fact (e.g. 'X happens. There are 7 valid Y.'), the model
    must commit to ALL of them. One fact wrong or missing → NO.
-6. If the question asks more than the expected answer specifies, the model
+6. Multiple-choice questions: when the expected answer is a single letter
+   (e.g. 'B') or a comma-separated list of letters (e.g. 'A, B, D'), the
+   model's committed answer must select exactly those letters — no fewer
+   and no extras. For 'A, B, D': committing to 'A, B' (missing D) is NO;
+   committing to 'A, B, C, D' (extra C) is NO. Letter order does not
+   matter ('B, A, D' = 'A, B, D').
+7. If the question asks more than the expected answer specifies, the model
    only needs to match the part the expected answer covers.
 
 Output (exactly 3 lines, no preamble, no JSON, no other text):

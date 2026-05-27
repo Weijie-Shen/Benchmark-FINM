@@ -66,10 +66,10 @@ failure, not a re-runnable pipeline error.
 ### Single prompt across all 5 categories — by design
 
 We deliberately do **not** use category-specific system prompts (probability
-vs brainteaser vs arithmetic vs coding vs finance). Reasons:
+vs brainteaser vs machine_learning vs corporate_finance vs derivatives). Reasons:
 
 1. **Prompt quality becomes a hidden variable.** If our probability prompt is
-   sharper than our finance prompt, score gaps reflect prompt engineering,
+   sharper than our derivatives prompt, score gaps reflect prompt engineering,
    not model ability. Reviewers cannot distinguish the two.
 2. **Cross-model fairness.** Different model families respond differently to
    prompt style. A single neutral prompt removes the temptation to over-fit
@@ -136,11 +136,11 @@ Target: **5 categories × 10 questions = 50 total**.
 |---|---|---|---|
 | Probability | `"probability"` | Word problems, distributions, expectations | Binary |
 | Brain teaser | `"brainteaser"` | Classic puzzles | Binary |
-| Arithmetic | `"arithmetic"` | Mental math, estimation | Binary |
-| Coding | `"coding"` | Short coding / algorithm questions | Binary |
-| Finance | `"finance"` | Open-ended valuation / market questions | **Rubric (1–10)** |
+| Machine learning | `"machine_learning"` | Linear regression, Bayes, statistical estimation | Binary |
+| Corporate finance | `"corporate_finance"` | MCQ on capital structure / governance + time-value calculations | Binary (incl. MCQ) |
+| Derivatives | `"derivatives"` | Open-ended options / pricing questions | **Rubric (1–10)** |
 
-Only **finance** uses `answer_type: "open"` (rubric grading). All other
+Only **derivatives** uses `answer_type: "open"` (rubric grading). All other
 categories use binary grading (`number`, `string`, `choice`, or unspecified).
 
 Per-question schema (binary):
@@ -155,7 +155,7 @@ Per-question schema (binary):
 ```
 
 Per-question schema (open / rubric): see §6.2 below and
-[`data/finance.json`](../data/finance.json) for a worked example.
+[`data/derivatives.json`](../data/derivatives.json) for a worked example.
 
 Required fields: `id`, `question`, `answer`. **Do not paraphrase or "clarify"
 a question before adding it.** If a question is ambiguous, that ambiguity is
@@ -218,8 +218,8 @@ If the judge reply can't be parsed (no JSON, malformed JSON, empty `scores`),
 
 ```json
 {
-  "id": "f01",
-  "topic": "finance",
+  "id": "d01",
+  "topic": "derivatives",
   "answer_type": "open",
   "question": "...",
   "answer": {
@@ -286,7 +286,7 @@ apply). The leaderboard sorts by `score_total = sum(Result.score)`.
    judge proactively penalize.
 7. **Bad rubrics → noisy judge scores.** Quality is on the dataset author.
 
-See [`data/finance.json`](../data/finance.json) for a worked example
+See [`data/derivatives.json`](../data/derivatives.json) for a worked example
 (Black-Scholes / jumps question).
 
 ### 6.3 Judge excerpt policy
@@ -342,7 +342,7 @@ trace.
 
 ```bash
 LLM/bin/python run_benchmark.py                       # full dataset
-LLM/bin/python run_benchmark.py --questions data/finance.json   # one category
+LLM/bin/python run_benchmark.py --questions data/derivatives.json   # one category
 ```
 
 Estimated cost: **$0.50–$1.50** per full 10-model × 50-question run.

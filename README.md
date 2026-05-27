@@ -1,8 +1,9 @@
 # Quant Interview Benchmark
 
 A small, opinionated benchmark for measuring how well frontier LLMs do on
-quantitative-interview questions: **probability, brain teasers, arithmetic,
-coding, and finance**.
+quantitative-interview questions: **probability, brain teasers, machine
+learning, corporate finance, and derivatives** (financial derivatives —
+options pricing, hedging, Black-Scholes — not calculus derivatives).
 
 Target: 5 categories × 10 questions = 50 questions. Each question contributes
 at most 1.0 point. A model's final score is the sum.
@@ -22,12 +23,13 @@ cp .env.example .env                  # then paste your OPENROUTER_API_KEY into 
 # Run the full benchmark
 LLM/bin/python run_benchmark.py
 
-# Iterate on one category (e.g. while writing new finance rubrics)
-LLM/bin/python run_benchmark.py --questions data/finance.json
+# Iterate on one category (e.g. while writing new derivatives rubrics)
+LLM/bin/python run_benchmark.py --questions data/derivatives.json
 ```
 
-Cost per full run: roughly **$0.50–$1.50** depending on question count.
-Wall time: **5–30 minutes** with the default concurrency of 8.
+Cost per full run (50 questions × 10 models = 500 cells): roughly
+**$1–3**, dominated by frontier-model token cost.
+Wall time: **10–40 minutes** with the default concurrency of 8.
 
 ---
 
@@ -56,8 +58,8 @@ data/*.json (questions) --------> | for each (model, question):   |
 
 | `answer_type` | Used by | Judge output | Contribution to total |
 |---|---|---|---|
-| `number` / `string` / `choice` / unset | probability, brainteaser, arithmetic, coding | 3 plain-text lines: extracted / reason / YES \| NO | `1.0` if YES else `0.0` |
-| `open` | finance | fenced ```json``` block with per-criterion scores | `raw_total / rubric.total_points` (always 0.0–1.0) |
+| `number` / `string` / `choice` / unset | probability, brainteaser, machine_learning, corporate_finance | 3 plain-text lines: extracted / reason / YES \| NO | `1.0` if YES else `0.0` |
+| `open` | derivatives | JSON object with per-criterion scores | `raw_total / rubric.total_points` (always 0.0–1.0) |
 
 Same judge model (`deepseek/deepseek-v4-pro`) for both paths.
 No tools, no web search, no code execution — the model under test runs entirely
@@ -80,11 +82,11 @@ committed answer in a long reasoning trace.
 |---|---|---|---|
 | Probability | `data/probability.json` | binary 0/1 | 1.0 |
 | Brain teaser | `data/brainteaser.json` | binary 0/1 | 1.0 |
-| Arithmetic | `data/arithmetic.json` | binary 0/1 | 1.0 |
-| Coding | `data/coding.json` | binary 0/1 | 1.0 |
-| Finance | `data/finance.json` | rubric 1–10 (× 0.1) | 1.0 |
+| Machine learning | `data/machine_learning.json` | binary 0/1 | 1.0 |
+| Corporate finance | `data/corporate_finance.json` | binary 0/1 (MCQ + numeric) | 1.0 |
+| Derivatives | `data/derivatives.json` | rubric 1–10 (× 0.1) | 1.0 |
 
-### Question schema (binary)
+### Question schema (binary — number / string)
 
 ```json
 {
@@ -96,12 +98,28 @@ committed answer in a long reasoning trace.
 }
 ```
 
+### Question schema (multiple choice)
+
+Every MCQ is treated as **multi-select-possible** — the number of correct
+options is not announced. `answer` is a list of all correct letters (use a
+plain string when only one letter is correct).
+
+```json
+{
+  "id": "cf01",
+  "topic": "corporate_finance",
+  "question": "Which factors apply? Select all that apply.\nA. ...\nB. ...\nC. ...\nD. ...",
+  "answer": ["A", "B", "D"],
+  "answer_type": "choice"
+}
+```
+
 ### Question schema (open / rubric)
 
 ```json
 {
-  "id": "f01",
-  "topic": "finance",
+  "id": "d01",
+  "topic": "derivatives",
   "question": "Compare option prices under different drifts ...",
   "answer_type": "open",
   "answer": {
@@ -126,7 +144,7 @@ committed answer in a long reasoning trace.
 ```
 
 Validator (runs at startup) enforces: required fields, unique IDs across files,
-and rubric point totals add up consistently. See [`data/finance.json`](data/finance.json) for a worked example.
+and rubric point totals add up consistently. See [`data/derivatives.json`](data/derivatives.json) for a worked example.
 
 **Do not paraphrase or "clarify" a question before adding it.** If a question is
 ambiguous, that ambiguity is part of the test. Only fix encoding (`Ã` → `×`)

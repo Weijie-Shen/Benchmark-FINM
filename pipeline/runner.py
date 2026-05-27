@@ -87,13 +87,19 @@ async def _eval_one(cfg: ModelConfig, q: dict, sem: asyncio.Semaphore,
 
 
 async def _evaluate_binary(cfg, q, raw, start) -> Result:
-    expected = str(q["answer"])
+    # Multi-select MCQ (answer_type=="choice") may give answer as a list,
+    # e.g. ["A", "B", "D"]. Normalize to "A, B, D" for the judge prompt.
+    expected_raw = q["answer"]
+    if isinstance(expected_raw, list):
+        expected = ", ".join(str(x) for x in expected_raw)
+    else:
+        expected = str(expected_raw)
     is_correct, extracted, reasoning = await judge_answer(
         q["question"], expected, raw)
     return Result(
         model=cfg.name, question_id=q["id"],
         score=1.0 if is_correct else 0.0, correct=is_correct,
-        extracted_answer=extracted, expected_answer=expected,
+        extracted_answer=extracted, expected_answer=expected_raw,
         raw_response=raw, judge_reasoning=reasoning,
         latency_s=time.time() - start,
         sampling_controlled=cfg.supports_temperature,

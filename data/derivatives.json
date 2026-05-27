@@ -1,7 +1,7 @@
 [
   {
-    "id": "f01",
-    "topic": "finance",
+    "id": "d01",
+    "topic": "derivatives",
     "question": "Suppose two assets in a Black-Scholes world have the same volatility but different drifts. How will the price of call options on them compare? Now suppose one of the assets undergoes downward jumps at random times. How will this affect option prices?",
     "answer_type": "open",
     "answer": {
@@ -60,8 +60,8 @@
     }
   },
   {
-    "id": "f02",
-    "topic": "finance",
+    "id": "d02",
+    "topic": "derivatives",
     "question": "Is it ever optimal to early exercise an American call option? What about a put option?",
     "answer_type": "open",
     "answer": {
@@ -119,8 +119,8 @@
     }
   },
   {
-    "id": "f03",
-    "topic": "finance",
+    "id": "d03",
+    "topic": "derivatives",
     "question": "Suppose there are no interest rates. The spot price of a non-dividend paying stock is 20. Option A pays 1 dollar if the stock price is above 30 at any time in the next year. Option B pays 1 if the stock price is above 30 at the end of the year. How are the values of A and B related?",
     "answer_type": "open",
     "answer": {
@@ -166,8 +166,8 @@
     }
   },
   {
-    "id": "f04",
-    "topic": "finance",
+    "id": "d04",
+    "topic": "derivatives",
     "question": "Suppose spot today is 90. A call option is struck at 100 and expires in one year. There are no interest rates. Spot moves log-normally in a perfect Black-Scholes world. I claim that I can hedge the option for free. Whenever spot crosses 100 in an upwards direction I borrow 100 and buy the stock. Whenever spot crosses 100 in a downwards direction I sell the stock and repay my loan. At expiry either the option is out-of-the-money in which case I have no position or it is in-the-money and I use the 100 dollar strike to payoff my loan. Thus the option has been hedged for free. Where is the error in this argument?",
     "answer_type": "open",
     "answer": {
@@ -213,8 +213,8 @@
     }
   },
   {
-    "id": "f05",
-    "topic": "finance",
+    "id": "d05",
+    "topic": "derivatives",
     "question": "What happens to the price of a vanilla call option as volatility tends to infinity?",
     "answer_type": "open",
     "answer": {
@@ -260,8 +260,8 @@
     }
   },
   {
-    "id": "f06",
-    "topic": "finance",
+    "id": "d06",
+    "topic": "derivatives",
     "question": "What is riskier: a call option or the underlying? (Consider a one-day time horizon and compute which has bigger Delta as a fraction of value.)",
     "answer_type": "open",
     "answer": {
@@ -313,8 +313,8 @@
     }
   },
   {
-    "id": "f07",
-    "topic": "finance",
+    "id": "d07",
+    "topic": "derivatives",
     "question": "In the pricing of options, why doesn't it matter if the stock price exhibits mean reversion?",
     "answer_type": "open",
     "answer": {
@@ -360,8 +360,8 @@
     }
   },
   {
-    "id": "f08",
-    "topic": "finance",
+    "id": "d08",
+    "topic": "derivatives",
     "question": "Team A plays team B, in a series of 7 games, whoever wins 4 games first wins. You want to bet 100 that your team wins the series, in which case you receive 200, or 0 if they lose. However the broker only allows bets on individual games. You can bet X on any individual game the day before it occurs to receive 2X if it wins and 0 if it loses. How do you achieve the desired pay-out? In particular, what do you bet on the first match?",
     "answer_type": "open",
     "answer": {
@@ -407,8 +407,8 @@
     }
   },
   {
-    "id": "f09",
-    "topic": "finance",
+    "id": "d09",
+    "topic": "derivatives",
     "question": "All being equal, which option has higher Vega? An at-the-money European call option with spot 100 or an at-the-money European call option with spot 200? (A structurer asked this question and didn't want formulas.)",
     "answer_type": "open",
     "answer": {
@@ -454,8 +454,8 @@
     }
   },
   {
-    "id": "f10",
-    "topic": "finance",
+    "id": "d10",
+    "topic": "derivatives",
     "question": "Consider the following binomial tree. There are two identical underlying assets A and B with the same prices and volatility. If all were the same except that research suggests company A will do better than company B, how would the option prices compare?",
     "answer_type": "open",
     "answer": {

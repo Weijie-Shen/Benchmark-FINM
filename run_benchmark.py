@@ -58,8 +58,9 @@ def main() -> int:
     # Per-category breakdown.
     all_cats = sorted({c for t in summary["per_model"].values() for c in t.get("per_category", {})})
     if all_cats:
+        cat_w = max(len(c) for c in all_cats) + 2   # auto-fit header
         print(f"\n=== Per-category score (max 10 per category) ===")
-        print(f"{'model':<{width}}  " + "  ".join(f"{c:>12}" for c in all_cats))
+        print(f"{'model':<{width}}  " + "  ".join(f"{c:>{cat_w}}" for c in all_cats))
         for name, t in rows:
             cells = []
             for c in all_cats:
@@ -67,8 +68,8 @@ def main() -> int:
                 if pc:
                     cells.append(f"{pc['score']:>5.1f}/{pc['total']:<2}")
                 else:
-                    cells.append(f"{'-':>10}")
-            print(f"  {name:<{width-2}}  " + "  ".join(f"{cell:>12}" for cell in cells))
+                    cells.append("-")
+            print(f"{name:<{width}}  " + "  ".join(f"{cell:>{cat_w}}" for cell in cells))
 
     # Missed / errored per model.
     print("\n=== Missed (score < 1) / errored per model ===")

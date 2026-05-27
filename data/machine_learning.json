@@ -1,0 +1,72 @@
+[
+  {
+    "id": "ml01",
+    "topic": "machine_learning",
+    "question": "Consider the linear regression setting with training set D := {(x_1, y_1), ..., (x_N, y_N)} where y_i and y_j are conditionally independent given x_i, x_j. Assume the likelihood follows a Normal distribution: p(y_n | x_n, θ) = N(y_n | x_n^T θ, σ²). The MLE parameters are defined as θ_MLE ≜ argmax_θ p(Y|X, θ). Derive the closed-form solution for θ_MLE. (Hint: use the log transformation to simplify the derivation.) Show your work.",
+    "answer": "θ_MLE = (X^T X)^{-1} X^T y",
+    "answer_type": "string"
+  },
+  {
+    "id": "ml02",
+    "topic": "machine_learning",
+    "question": "Suppose you roll three fair 100-sided dice. What is the expected value of the lowest roll? Show your work.",
+    "answer": 25.5025,
+    "answer_type": "number"
+  },
+  {
+    "id": "ml03",
+    "topic": "machine_learning",
+    "question": "Using OLS, we regress y onto X_1 and find R² = 0.15. We also regress y onto X_2 and find R² = 0.20. Let [min, max] denote the lower and upper bounds of the R² of a model which regresses y onto (X_1, X_2). Express your answer as max/min. Show your work.",
+    "answer": 5,
+    "answer_type": "number"
+  },
+  {
+    "id": "ml04",
+    "topic": "machine_learning",
+    "question": "Suppose Var(X) = 10 and Var(Y) = 20. We perform the regression y ~ α_x + β_x · x and obtain β_x = 1. Now perform the reverse regression x ~ α_y + β_y · y. What is the value of β_y? Show your work.",
+    "answer": 0.5,
+    "answer_type": "number"
+  },
+  {
+    "id": "ml05",
+    "topic": "machine_learning",
+    "question": "German tanks are assigned distinct serial numbers 1, 2, ..., N. You observe 6 tanks with serial numbers 38, 17, 59, 42, 97, and 120. Under a frequentist approach, what is the best guess for N? Show your work.",
+    "answer": 139,
+    "answer_type": "number"
+  },
+  {
+    "id": "ml06",
+    "topic": "machine_learning",
+    "question": "You are given a complete undirected graph with N ≥ 2 nodes. You first select a uniformly random node, and at each step after you move to any node (including the current one) uniformly at random. Find the expected number of turns until you visit all nodes, with N = 100. Round to the nearest integer. Show your work.",
+    "answer": 519,
+    "answer_type": "number"
+  },
+  {
+    "id": "ml07",
+    "topic": "machine_learning",
+    "question": "You are taking samples of size s from a population. Let p be the desired confidence (e.g., 0.99) and e the proportion of outliers in the population. Derive an equation in terms of s, p, and e for the number of samples N needed to be at least p-confident that at least one sample contains no outliers. Show your work.",
+    "answer": "N > log(1 - p) / log(1 - (1 - e)^s)",
+    "answer_type": "string"
+  },
+  {
+    "id": "ml08",
+    "topic": "machine_learning",
+    "question": "A certain disease has an incidence rate of 2%. The false negative rate is 10% and the false positive rate is 1%. What is the probability that a person who tests positive actually has the disease? Show your work.",
+    "answer": 0.647,
+    "answer_type": "number"
+  },
+  {
+    "id": "ml09",
+    "topic": "machine_learning",
+    "question": "A game has you roll a fair six-sided die repeatedly, until you first encounter a number which has previously appeared. Let r denote the number of times the die was rolled, and p_r the probability of rolling exactly r times. Calculate p_3. Show your work.",
+    "answer": 0.2778,
+    "answer_type": "number"
+  },
+  {
+    "id": "ml10",
+    "topic": "machine_learning",
+    "question": "You are given a standard deck of 52 cards (26 red, 26 black). A run is a block of consecutively drawn cards of the same color (e.g., BBRRBBB has 3 runs). Find the expected number of runs in a shuffled deck. Show your work.",
+    "answer": 27,
+    "answer_type": "number"
+  }
+]
