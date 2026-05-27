@@ -14,6 +14,10 @@ from pathlib import Path
 
 
 REQUIRED_QUESTION_FIELDS = ("id", "question", "answer")
+# `answer_type` is optional (missing/null treated as binary). When set, it
+# must be one of these — a typo like "chioce" would otherwise silently fall
+# into the binary path and never get caught.
+VALID_ANSWER_TYPES = {None, "number", "string", "choice", "open"}
 _POINT_EPS = 1e-6   # tolerance for the float-sum check on rubric points
 
 
@@ -61,7 +65,12 @@ def _validate(qs) -> None:
         if q["id"] in seen:
             raise ValueError(f"duplicate question id: {q['id']}")
         seen.add(q["id"])
-        if q.get("answer_type") == "open":
+        at = q.get("answer_type")
+        if at not in VALID_ANSWER_TYPES:
+            raise ValueError(
+                f"{q['id']}: invalid answer_type {at!r}; "
+                f"must be one of {sorted(x for x in VALID_ANSWER_TYPES if x)}")
+        if at == "open":
             _validate_rubric(q["answer"], q["id"])
 
 

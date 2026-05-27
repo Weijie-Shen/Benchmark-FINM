@@ -207,6 +207,26 @@ def _parse_rubric_judge_output(text: str, rubric: dict) -> tuple[float, list[dic
     return min(raw_total, float(rubric["total_points"])), breakdown
 
 
+async def _call_judge(system: str, user: str, max_tokens: int,
+                      response_format: dict | None = None) -> tuple[str, CallStats]:
+    """Internal helper for the two judge paths. Returns (text, stats).
+    Shares the HTTP/SDK setup that judge_answer and judge_rubric_score both need."""
+    client = _get_client().with_options(timeout=JUDGE_CALL_TIMEOUT_S)
+    kwargs = dict(model=JUDGE_MODEL, temperature=0, top_p=1.0,
+                  max_tokens=max_tokens,
+                  messages=[{"role": "system", "content": system},
+                            {"role": "user",   "content": user}])
+    if response_format is not None:
+        kwargs["response_format"] = response_format
+
+    t0 = time.time()
+    resp = await client.chat.completions.create(**kwargs)
+    latency = time.time() - t0
+    stats = _stats_from(resp, latency, JUDGE_PRICE_IN, JUDGE_PRICE_OUT)
+    text = (resp.choices[0].message.content or "").strip()
+    return text, stats
+
+
 # ---------------------------------------------------------------------------
 # Public entry points
 # ---------------------------------------------------------------------------
@@ -242,39 +262,24 @@ async def judge_answer(question: str, expected: str,
     if not raw_response.strip():
         return False, "N/A", "model returned empty response", CallStats()
 
-    client = _get_client().with_options(timeout=JUDGE_CALL_TIMEOUT_S)
-    t0 = time.time()
-    resp = await client.chat.completions.create(
-        model=JUDGE_MODEL,
-        temperature=0,
-        top_p=1.0,
-        max_tokens=BINARY_JUDGE_MAX_TOKENS,
-        messages=[
-            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
-            {"role": "user",   "content": (
-                f"Question:\n{question}\n\n"
-                f"Expected answer: {expected}\n\n"
-                f"Model response (head + tail; middle may be truncated):\n"
-                f"{_excerpt_for_judge(raw_response)}"
-            )},
-        ],
+    user = (
+        f"Question:\n{question}\n\n"
+        f"Expected answer: {expected}\n\n"
+        f"Model response (head + tail; middle may be truncated):\n"
+        f"{_excerpt_for_judge(raw_response)}"
     )
-    latency = time.time() - t0
-    stats = _stats_from(resp, latency, JUDGE_PRICE_IN, JUDGE_PRICE_OUT)
+    text, stats = await _call_judge(JUDGE_SYSTEM_PROMPT, user, BINARY_JUDGE_MAX_TOKENS)
 
-    text = (resp.choices[0].message.content or "").strip()
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-
     if not lines:
         raise BinaryJudgeParseError(
             "binary judge returned empty reply (would have silently scored 0)")
 
     # Judge is asked for exactly 3 lines (extracted / reason / YES|NO).
-    # Be tolerant if it deviates: extracted = first line, verdict = last line.
+    # Be tolerant: extracted = first line, verdict = last line.
     extracted = lines[0]
     verdict = lines[-1].upper()
-    is_correct = verdict.startswith("YES")
-    return is_correct, extracted, text, stats
+    return verdict.startswith("YES"), extracted, text, stats
 
 
 async def judge_rubric_score(question: str, rubric: dict,
@@ -285,27 +290,15 @@ async def judge_rubric_score(question: str, rubric: dict,
     if not raw_response.strip():
         return 0.0, "model returned empty response", [], CallStats()
 
-    client = _get_client().with_options(timeout=JUDGE_CALL_TIMEOUT_S)
-    t0 = time.time()
-    resp = await client.chat.completions.create(
-        model=JUDGE_MODEL,
-        temperature=0,
-        top_p=1.0,
-        max_tokens=RUBRIC_JUDGE_MAX_TOKENS,
-        response_format={"type": "json_object"},   # forces pure JSON reply
-        messages=[
-            {"role": "system", "content": RUBRIC_JUDGE_SYSTEM_PROMPT},
-            {"role": "user",   "content": (
-                f"Question:\n{question}\n\n"
-                f"Rubric:\n{json.dumps(rubric, indent=2, ensure_ascii=False)}\n\n"
-                f"Model response (head + tail; middle may be truncated):\n"
-                f"{_excerpt_for_judge(raw_response)}"
-            )},
-        ],
+    user = (
+        f"Question:\n{question}\n\n"
+        f"Rubric:\n{json.dumps(rubric, indent=2, ensure_ascii=False)}\n\n"
+        f"Model response (head + tail; middle may be truncated):\n"
+        f"{_excerpt_for_judge(raw_response)}"
     )
-    latency = time.time() - t0
-    stats = _stats_from(resp, latency, JUDGE_PRICE_IN, JUDGE_PRICE_OUT)
+    text, stats = await _call_judge(
+        RUBRIC_JUDGE_SYSTEM_PROMPT, user, RUBRIC_JUDGE_MAX_TOKENS,
+        response_format={"type": "json_object"})
 
-    text = (resp.choices[0].message.content or "").strip()
     raw_total, breakdown = _parse_rubric_judge_output(text, rubric)
     return raw_total, text, breakdown, stats

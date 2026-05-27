@@ -28,6 +28,7 @@ try:
 except ImportError:
     pass
 
+from pipeline.clients import has_api_key
 from pipeline.dataset import load_questions
 from pipeline.models import MODELS
 from pipeline.output import write_outputs
@@ -48,6 +49,8 @@ async def _rejudge_with_progress(cfg, q, prev: Result, sem, progress) -> Result:
 
 async def main_async(details_path: Path, questions_path: Path, out_dir: Path,
                      concurrency: int) -> None:
+    if not has_api_key():
+        raise RuntimeError("OPENROUTER_API_KEY not set. Add it to .env.")
     rows = json.load(open(details_path))
     print(f"[rerun] source: {details_path.name}  ({len(rows)} cells total)")
 

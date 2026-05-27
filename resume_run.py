@@ -24,6 +24,7 @@ try:
 except ImportError:
     pass
 
+from pipeline.clients import has_api_key
 from pipeline.dataset import load_questions
 from pipeline.models import MODELS
 from pipeline.output import write_outputs
@@ -76,6 +77,8 @@ def _load_fresh_partials(paths: list[Path], current_models: set[str],
 
 async def main_async(partial_paths: list[Path], questions_path: Path,
                      out_dir: Path, concurrency: int) -> None:
+    if not has_api_key():
+        raise RuntimeError("OPENROUTER_API_KEY not set. Add it to .env.")
     questions = load_questions(questions_path)
     models = list(MODELS)
     all_keys = {(m.name, q["id"]) for m in models for q in questions}
