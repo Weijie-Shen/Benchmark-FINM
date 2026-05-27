@@ -52,7 +52,7 @@
     "id": "b08",
     "topic": "brainteaser",
     "question": "A compliance system stores 10 transaction files in chronological order, labeled F01 through F10. Exactly one file contains an error. You may inspect any file you choose. After each inspection, the system tells you whether the erroneous file is the inspected file, earlier than the inspected file, or later than the inspected file. What is the minimum number of inspections needed in the worst case to identify the erroneous file with certainty?",
-    "answer": "4",
+    "answer": "3",
     "answer_type": "number"
   },
   {
