@@ -345,7 +345,10 @@ async def run_rejudge_phase(results: list[Result], models, questions,
 # Top-level orchestration — standard full run
 # ---------------------------------------------------------------------------
 async def run_benchmark(questions_path: Path, out_dir: Path,
-                        concurrency: int = 8) -> dict:
+                        concurrency: int = 8, label: str | None = None) -> dict:
+    """`label` becomes the filename suffix for the output files. Defaults to
+    a timestamp `YYYYMMDD-HHMMSS`. Pass e.g. label='run1' to write
+    `details_run1.{json,jsonl}`, `summary_run1.json`, `scores_run1.csv`."""
     if not has_api_key():
         raise RuntimeError("OPENROUTER_API_KEY not set. Add it to .env.")
     questions = load_questions(questions_path)
@@ -360,8 +363,8 @@ async def run_benchmark(questions_path: Path, out_dir: Path,
         print(f"[runner] sampling NOT controlled for: {', '.join(uncontrolled)}")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    jsonl_path = out_dir / f"details_{timestamp}.jsonl"
+    suffix = label or time.strftime("%Y%m%d-%H%M%S")
+    jsonl_path = out_dir / f"details_{suffix}.jsonl"
     progress = make_progress(jsonl_path, total)
     sem = asyncio.Semaphore(concurrency)
 
@@ -369,4 +372,4 @@ async def run_benchmark(questions_path: Path, out_dir: Path,
     results: list[Result] = await asyncio.gather(*tasks)
 
     await run_rejudge_phase(results, models, questions, jsonl_path, label="runner")
-    return write_outputs(results, models, questions, out_dir, timestamp)
+    return write_outputs(results, models, questions, out_dir, suffix)

@@ -76,7 +76,7 @@ def _load_fresh_partials(paths: list[Path], current_models: set[str],
 
 
 async def main_async(partial_paths: list[Path], questions_path: Path,
-                     out_dir: Path, concurrency: int) -> None:
+                     out_dir: Path, concurrency: int, label: str | None) -> None:
     if not has_api_key():
         raise RuntimeError("OPENROUTER_API_KEY not set. Add it to .env.")
     questions = load_questions(questions_path)
@@ -93,8 +93,8 @@ async def main_async(partial_paths: list[Path], questions_path: Path,
     cfg_by_name = {m.name: m for m in models}
     q_by_id = {q["id"]: q for q in questions}
 
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    jsonl_path = out_dir / f"details_{timestamp}.jsonl"
+    suffix = label or time.strftime("%Y%m%d-%H%M%S")
+    jsonl_path = out_dir / f"details_{suffix}.jsonl"
     progress = make_progress(jsonl_path, len(missing))
     sem = asyncio.Semaphore(concurrency)
 
@@ -105,7 +105,7 @@ async def main_async(partial_paths: list[Path], questions_path: Path,
     merged.extend(new_results)
 
     await run_rejudge_phase(merged, models, questions, jsonl_path, label="resume")
-    write_outputs(merged, models, questions, out_dir, timestamp)
+    write_outputs(merged, models, questions, out_dir, suffix)
     print(f"\n[resume] total: {len(merged)} cells, errors remaining: "
           f"{sum(1 for r in merged if r.error)}")
 
@@ -118,6 +118,9 @@ def main() -> int:
     p.add_argument("--questions", default="data")
     p.add_argument("--out", default="results")
     p.add_argument("--concurrency", type=int, default=8)
+    p.add_argument("--label",
+                   help="suffix for output files, e.g. 'run2_resumed'. "
+                        "Default: timestamp.")
     args = p.parse_args()
 
     out_dir = Path(args.out)
@@ -129,7 +132,8 @@ def main() -> int:
             print(f"error: no details_*.jsonl in {out_dir}")
             return 1
 
-    asyncio.run(main_async(partials, Path(args.questions), out_dir, args.concurrency))
+    asyncio.run(main_async(partials, Path(args.questions), out_dir,
+                           args.concurrency, args.label))
     return 0
 
 

@@ -48,7 +48,7 @@ async def _rejudge_with_progress(cfg, q, prev: Result, sem, progress) -> Result:
 
 
 async def main_async(details_path: Path, questions_path: Path, out_dir: Path,
-                     concurrency: int) -> None:
+                     concurrency: int, label: str | None) -> None:
     if not has_api_key():
         raise RuntimeError("OPENROUTER_API_KEY not set. Add it to .env.")
     rows = json.load(open(details_path))
@@ -80,8 +80,8 @@ async def main_async(details_path: Path, questions_path: Path, out_dir: Path,
     print(f"[rerun]   rejudge-only (cheap): {len(rejudge_only)}")
     print(f"[rerun]   full re-run (model + judge): {len(full_rerun)}")
 
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    jsonl_path = out_dir / f"details_{timestamp}.jsonl"
+    suffix = label or time.strftime("%Y%m%d-%H%M%S")
+    jsonl_path = out_dir / f"details_{suffix}.jsonl"
     progress = make_progress(jsonl_path, len(rejudge_only) + len(full_rerun))
     sem = asyncio.Semaphore(concurrency)
 
@@ -99,7 +99,7 @@ async def main_async(details_path: Path, questions_path: Path, out_dir: Path,
               for row in rows]
 
     await run_rejudge_phase(merged, models, questions, jsonl_path, label="rerun")
-    write_outputs(merged, models, questions, out_dir, timestamp)
+    write_outputs(merged, models, questions, out_dir, suffix)
     n_err = sum(1 for r in merged if r.error)
     print(f"\n[rerun] errors before: {len(err_rows)}  after: {n_err}")
 
@@ -111,6 +111,9 @@ def main() -> int:
     p.add_argument("--questions", default="data")
     p.add_argument("--out", default="results")
     p.add_argument("--concurrency", type=int, default=8)
+    p.add_argument("--label",
+                   help="suffix for output files, e.g. 'run2_fixed'. "
+                        "Default: timestamp.")
     args = p.parse_args()
 
     out_dir = Path(args.out)
@@ -123,7 +126,8 @@ def main() -> int:
             return 1
         details_path = candidates[-1]
 
-    asyncio.run(main_async(details_path, Path(args.questions), out_dir, args.concurrency))
+    asyncio.run(main_async(details_path, Path(args.questions), out_dir,
+                           args.concurrency, args.label))
     return 0
 
 

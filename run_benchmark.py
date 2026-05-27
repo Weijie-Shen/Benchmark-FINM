@@ -64,6 +64,9 @@ def main() -> int:
                    help="output directory (default: results/)")
     p.add_argument("--concurrency", type=int, default=8,
                    help="max in-flight API calls (default: 8)")
+    p.add_argument("--label",
+                   help="suffix for output files, e.g. 'run2' -> details_run2.json. "
+                        "Default: timestamp.")
     args = p.parse_args()
 
     questions_path = Path(args.questions)
@@ -75,6 +78,7 @@ def main() -> int:
         questions_path=questions_path,
         out_dir=Path(args.out),
         concurrency=args.concurrency,
+        label=args.label,
     ))
 
     # ------------------------------------------------------------------
