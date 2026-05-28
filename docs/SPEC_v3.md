@@ -1,11 +1,13 @@
-# Quant Interview Benchmark — v3.7 Specification
+# Quant Interview Benchmark — v3.12 Specification
 
 **Status**: locked. Any change to the items below requires a version bump per §10.
-**Spec date**: 2026-05-25.
+**Spec date**: 2026-05-27.
 
 This document describes the current locked experimental conditions. For the
 history of how we got here (v3.0 tool support, v3.4 judge switch, v3.6 tool
-disable, v3.7 robustness fixes, etc.), see [`CHANGELOG.md`](CHANGELOG.md).
+disable, v3.7–v3.10 robustness fixes, v3.11 pluggable judge + numeric
+pre-check, v3.12 parser fixes + 5-judge experiment), see
+[`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -85,10 +87,32 @@ a single prompt across heterogeneous tasks. Changing this rule requires a
 v4.0 bump.
 
 ### Judge prompts
-- Binary judge (§6.1) — 3-line plain-text output.
+- Binary judge (§6.1) — 3-line plain-text output. Opens with an explicit
+  "YOU ARE A COMPARATOR, NOT A SOLVER" block (v3.12) to suppress
+  re-derivation behavior observed in Sonnet on hard cells. Includes
+  concrete few-shot examples of numeric tolerance, inequality
+  literalism, and hedged-commit handling.
 - Rubric judge (§6.2) — JSON object (enforced by `response_format`).
+  Opens with a "YOU ARE A GRADER, NOT A SOLVER" block; explicitly
+  forbids chain-of-thought preamble before the JSON.
 
-Judge model: `deepseek/deepseek-v4-pro` for both paths.
+### Judge model — pluggable
+
+Default judge: `deepseek/deepseek-v4-pro` (the strict reasoning judge).
+Override at run time with `--judge <openrouter-id>` on any entry script.
+Models with verified pricing live in `KNOWN_JUDGE_PRICING` in
+`pipeline/clients.py`:
+
+| Judge | Pricing ($/Mtok in/out) | Character |
+|---|---|---|
+| `google/gemini-3.1-flash-lite` | 0.250 / 1.500 | Fast, lenient, non-reasoning |
+| `deepseek/deepseek-v4-pro` (default) | 0.435 / 0.870 | Strict reasoning |
+| `qwen/qwen3.6-flash` | 0.188 / 1.125 | Reasoning-heavy (~15K reasoning tokens/rubric) |
+| `x-ai/grok-4.3` | 1.250 / 2.500 | Strict reasoning; non-US lineage |
+| `anthropic/claude-sonnet-4.6` | 3.000 / 15.000 | Lenient mid-strict reasoning |
+| `openai/gpt-5.5` | 5.000 / 30.000 | **Not recommended** — `supports_temperature=False` ⇒ non-deterministic verdicts |
+
+Adding a new judge means adding one line to `KNOWN_JUDGE_PRICING`.
 
 ---
 
@@ -98,9 +122,9 @@ Judge model: `deepseek/deepseek-v4-pro` for both paths.
 |---|---|---|
 | `temperature` | 0.0 | Honored by 9 of 10 models |
 | `top_p` | 1.0 | Same |
-| `max_tokens` (model) | 8192 | `finish_reason == "length"` → cell scored 0, no judge call |
-| `max_tokens` (binary judge) | 1000 | Headroom for reasoning judges (deepseek-v4-pro) |
-| `max_tokens` (rubric judge) | 1500 | Same |
+| `max_tokens` (model) | 8192 | `finish_reason == "length"` → cell scored wrong, no judge call |
+| `max_tokens` (binary judge) | 4000 | Generous headroom for reasoning judges (deepseek burns 200–500 reasoning tokens; qwen 600+) |
+| `max_tokens` (rubric judge) | 5000 | Same, larger since rubric output has more fields |
 | `seed` | not set | |
 | `tools` | **not passed** | See §4 |
 | `plugins` | **not passed** | See §4 |
@@ -170,9 +194,30 @@ category is filled in, it just appears in the output.
 
 ### 6.1 Binary judge (answer_types: `number`, `string`, `choice`, or unspecified)
 
-Single `deepseek/deepseek-v4-pro` call per `(model, question)`. The judge sees
-the question, the expected answer, and the model's response (head + tail
-excerpt if oversized — see §6.3). It is instructed to:
+The binary path runs in two stages.
+
+**Stage 1 — Numeric pre-check (deterministic, no API call)** (v3.11+):
+
+If both `expected` and the model's committed answer (extracted from the
+LAST `Final Answer:` line) parse as clean numerics — plain decimal,
+percent, simple fraction `a/b`, or currency `$199,900.46` — the pipeline
+compares them in Python directly. Agreement within `rel_tol=1e-4` (or
+`abs_tol=1e-9`, whichever is larger) auto-scores YES without calling
+the judge. Tolerance was tightened from 0.5% to 0.01% after a safety
+audit against judge-unanimous cells caught 10 false positives at the
+looser bound. Pre-check fires on ~25 % of binary cells in the current
+dataset and eliminates judge-model variance for those.
+
+On disagreement, the call **falls through to the judge** — equivalent
+forms (algebraic expressions, prose) and multi-fact answers can still
+be recognized.
+
+**Stage 2 — LLM judge call** (when pre-check doesn't fire):
+
+Single API call per `(model, question)` to the configured judge model.
+The judge sees the question, the expected answer, and the model's
+response (head + tail excerpt if oversized — see §6.3). It is
+instructed to:
 
 1. Find the LAST `Final Answer:` line in the response and use what follows
    as the committed answer.
@@ -180,19 +225,25 @@ excerpt if oversized — see §6.3). It is instructed to:
    (often a `\boxed{...}` value or a bold final sentence).
 3. If the model wrote `I don't know`, grade as incorrect.
 
-The judge returns 3 plain-text lines:
+The judge is required to output exactly 3 lines:
 
-- line 1: extracted answer (≤40 chars)
-- line 2: reason (≤40 chars)
+- line 1: extracted answer (≤60 chars)
+- line 2: reason (≤60 chars)
 - line 3: `YES` or `NO`
 
-`correct = (line 3 == "YES")`. Full text stored in `judge_reasoning`.
-Contribution to total: `1.0` if correct else `0.0`.
+**Verdict parsing** (v3.12 rewrite): `_verdict_is_yes(text)` scans the
+text from the bottom up for word-boundary `\bYES\b` or `\bNO\b`
+tokens, returning the first match. This correctly handles common
+label-prefixed forms: `"Line 3: YES"`, `"**YES**"`, `"Verdict: NO."`.
+Word boundaries exclude incidental substrings like `know`, `NOT`, or
+`No such X exists`. If neither token appears anywhere,
+`BinaryJudgeParseError` is raised (re-runnable cell error).
+`_strip_label()` cleans `Line 1:` / `Extracted:` prefixes from
+`extracted_answer` so the Result row is consistent across judges.
 
-If the judge returns an empty / unparseable reply, `BinaryJudgeParseError`
-is raised and the cell is recorded as a re-runnable error (not as the model
-scoring 0). The parser otherwise tolerates ≠3 lines by taking `extracted =
-first line`, `verdict = last line`.
+The contribution to total is `1.0` if YES else `0.0`. Full judge text
+stored in `judge_reasoning`. For pre-check hits, `judge_reasoning`
+starts with `"numeric pre-check:"` for easy filtering.
 
 ### 6.2 Rubric judge (answer_type: `open`)
 
@@ -210,9 +261,28 @@ When `answer_type == "open"`:
   rubric scale (5, 10, 100, anything) normalizes to a 0.0-1.0 contribution.
   Default total is 10.
 
-If the judge reply can't be parsed (no JSON, malformed JSON, empty `scores`),
-`RubricJudgeParseError` is raised; the row is recorded as a re-runnable error
-(not as the model scoring 0).
+**Tolerant JSON parsing** (v3.11–v3.12). Real judges emit JSON with
+several observable formatting quirks. `_parse_rubric_judge_output`
+composes four fallbacks in order, returning the first that yields a
+dict with a `"scores"` key (whitespace in keys is normalized):
+
+1. `_loads_tolerant`: strict `json.loads`, then retry after stripping
+   trailing commas before `]` or `}` (gemini-flash-lite emits these).
+2. Fenced ```` ```json ```` block (some providers wrap JSON in
+   markdown).
+3. `_extract_object_with_key`: walks `text` yielding each balanced
+   top-level `{...}` block, returns the first that parses to a dict
+   with `"scores"`. Handles Sonnet's chain-of-thought-then-JSON
+   pattern even when the prose contains literal `{...}` fragments
+   like LaTeX or example dicts.
+4. **Non-dict items in `"scores"` are skipped** (v3.12). Grok-4.3
+   stuffs a stray `"summary: ..."` string into the scores list
+   alongside the real criterion dicts; the parser uses the dicts and
+   skips the string. If NO dict items survive, raises
+   `RubricJudgeParseError`.
+
+If all four fallbacks fail, `RubricJudgeParseError` is raised; the
+row is recorded as a re-runnable error (not as the model scoring 0).
 
 #### Rubric schema (data side)
 
@@ -317,7 +387,7 @@ trace.
 | `question_id` | Question id |
 | `score` | Float 0.0–1.0, contribution to the model's total. Binary: 0 or 1; rubric: `raw_total / total_points` |
 | `correct` | Boolean for binary; `null` for rubric |
-| `extracted_answer` | Binary: judge's line 1. Rubric: `"rubric:N/M"`. Truncated model output: `"[truncated]"` |
+| `extracted_answer` | Binary: judge's line 1 with `Line 1:` / `Extracted:` / markdown emphasis stripped (v3.12). Pre-check hit: the model's committed answer text. Rubric: `"rubric:N/M"`. Empty model response: `"N/A"` |
 | `expected_answer` | String / number for binary; list of letters for MCQ; rubric dict for open |
 | `raw_response` | Model's full reply |
 | `judge_reasoning` | Full judge text (3-line plain for binary; JSON object for rubric) |
@@ -337,26 +407,47 @@ trace.
 | `rubric_breakdown` | List of `{id, score, comment}` per criterion for open; `null` otherwise |
 | `error` | `"ExceptionType: message"`, or `null` |
 
-### Output files (per run, timestamped)
+### Output files (per run, labeled or timestamped)
+
+The suffix is `--label`'s argument when given, else the current
+timestamp `YYYYMMDD-HHMMSS`. Files are never overwritten — each script
+writes a NEW labeled set.
 
 | File | Contents |
 |---|---|
-| `details_<ts>.json` | All Result rows, full info |
-| `details_<ts>.jsonl` | Same rows, appended incrementally as each cell completes (crash-safe) |
-| `summary_<ts>.json` | Per-model totals + per-category breakdown + `missed_ids` / `error_ids` |
-| `scores_<ts>.csv` | Model × question matrix, sorted by total |
+| `details_<label>.json` | All Result rows, full info |
+| `details_<label>.jsonl` | Same rows, appended incrementally as each cell completes (crash-safe) |
+| `summary_<label>.json` | Per-model totals + per-category breakdown + `missed_ids` / `error_ids` |
+| `scores_<label>.csv` | Model × question matrix, sorted by total |
+
+For cross-judge experiments, the recommended naming convention is
+`details_run<N>_<judge>.json` (e.g. `details_run3_deepseek.json`).
+`make_report.py` auto-detects this pattern and groups files by run
+number.
 
 ---
 
 ## 8. How to run
 
 ```bash
-LLM/bin/python run_benchmark.py                       # full dataset
+LLM/bin/python run_benchmark.py                                # full dataset, default deepseek judge
 LLM/bin/python run_benchmark.py --questions data/derivatives.json   # one category
+LLM/bin/python run_benchmark.py --judge anthropic/claude-sonnet-4.6 --label run3_sonnet   # alt judge
+
+# Cross-judge experiment (no model re-calls; re-uses preserved raw_response)
+LLM/bin/python rejudge_run.py \
+    --details results/details_run3_deepseek.json \
+    --judge x-ai/grok-4.3 --label run3_grok
+
+# Report figures (auto-detects all judge files for the highest-numbered run)
+LLM/bin/python make_report.py --canonical-judge deepseek
 ```
 
-Estimated cost: **$0.50–$1.50** per full 10-model × 50-question run.
-Estimated wall time: **5–30 minutes** at default concurrency 8.
+Cost (observed, run3 with default deepseek judge): **~$5** total
+(~$4 model, ~$0.50 judge). Adding cross-judge rejudge passes:
+$0.23–$2.92 per judge depending on model (see README cost table).
+Wall time: **10–25 minutes** for the initial run; **3–5 minutes** per
+rejudge pass.
 
 ---
 
@@ -364,23 +455,36 @@ Estimated wall time: **5–30 minutes** at default concurrency 8.
 
 1. **Small sample.** 50 target questions is enough for ranking, not for
    tight per-category statistical claims.
-2. **Single judge model.** Every grading decision routes through
-   `deepseek-v4-pro`. Audit `judge_reasoning` before publishing a
-   leaderboard. Same-vendor pair (`deepseek-v4-flash` in the lineup, judged
-   by `deepseek-v4-pro`) is a potential bias source.
+2. **Cross-judge variance is real but measurable.** The default judge
+   is `deepseek-v4-pro`. Run3 with 5 judges (gemini, deepseek, grok,
+   sonnet, qwen) measured the spread on the same model outputs:
+   binary cells split on only ~6% of cells (well-tamed); rubric
+   (derivatives) cells show a 16-point spread across judges (still
+   structural). For published claims, either use deepseek as the
+   strict canonical (recommended; what `make_report.py
+   --canonical-judge deepseek` produces) or report multi-judge
+   median. Same-vendor pairs (`deepseek-v4-flash` model judged by
+   `deepseek-v4-pro`) are not strong bias sources in the observed
+   data, but worth flagging.
 3. **No tools, no multi-sample.** The benchmark measures one configuration.
    Real deployments differ.
 4. **Training-data leakage risk.** Many classic interview questions appear
    on prep sites, so models may be remembering rather than reasoning. No
    defense against this in the current spec.
-5. **1 model has uncontrolled sampling.** Flagged via
-   `sampling_controlled=false` per row, but the comparison is inherently
-   noisier for those models.
+5. **1 model has uncontrolled sampling.** `gpt-5.5` ignores
+   `temperature` / `top_p`. Flagged via `sampling_controlled=false`
+   per row. For the same reason `gpt-5.5` is **not allowed as a
+   judge** — verdicts would drift across re-runs.
 6. **Rubric judge can over-award.** Mitigated by clamping each criterion to
-   its declared max and ignoring the judge's `total` field, but not eliminated.
+   its declared max and ignoring the judge's `total` field, but not
+   eliminated. Rubric judging is the largest remaining variance source.
 7. **`Result.correct` is a partial signal.** Meaningful for binary rows only.
    Downstream analysis should sum `Result.score` (always 0.0–1.0) and ignore
    `correct` for rubric rows.
+8. **Sonnet occasionally produces no verdict** on hard cells (writes
+   extended reasoning then truncates). v3.12's anti-solving prompt
+   reduces this but doesn't eliminate it; affected cells surface as
+   `BinaryJudgeParseError` and are re-runnable.
 
 ---
 

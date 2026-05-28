@@ -2,29 +2,29 @@
   {
     "id": "b01",
     "topic": "brainteaser",
-    "question": "A hotel has 144 rooms numbered 1 through 144. At the beginning of the day, every room is messy. There are 144 cleaning supervisors, also numbered 1 through 144. Supervisor 1 walks through every room and reverses its condition: messy rooms become clean, and clean rooms become messy. Supervisor 2 does the same for every room whose number is a multiple of 2. Supervisor 3 does the same for every room whose number is a multiple of 3. This continues until Supervisor 144 has finished. At the end of the process, is Room 96 clean or messy? How many rooms are clean?",
-    "answer": "Room 96 is messy. There are 12 clean rooms.",
-    "answer_type": "string"
+    "question": "A hotel has 144 rooms numbered 1 through 144. At the beginning of the day, every room is messy. There are 144 cleaning supervisors, also numbered 1 through 144. Supervisor 1 walks through every room and reverses its condition: messy rooms become clean, and clean rooms become messy. Supervisor 2 does the same for every room whose number is a multiple of 2. Supervisor 3 does the same for every room whose number is a multiple of 3. This continues until Supervisor 144 has finished. At the end of the process, how many rooms are clean?",
+    "answer": "12",
+    "answer_type": "number"
   },
   {
     "id": "b02",
     "topic": "brainteaser",
-    "question": "A risk team is testing a fragile trading algorithm under increasingly severe market-stress scenarios numbered 1 through 100. There is an unknown threshold scenario N. If the algorithm is tested at scenario N or any more severe scenario, that copy of the algorithm becomes permanently corrupted. If it is tested below scenario N, it survives and can be tested again. The team has exactly 2 identical copies of the algorithm. They need to determine N with the smallest possible worst-case number of tests. What is the minimum worst-case number of tests, and what testing strategy should they use?",
-    "answer": "14 tests in the worst case. Use decreasing interval sizes 14, 13, 12, 11, ... . Test the first copy at scenarios 14, 27, 39, 50, 60, 69, 77, 84, 90, 95, 99, and 100. If the first copy becomes corrupted, use the second copy to search linearly between the previous safe scenario and the failure scenario.",
-    "answer_type": "string"
+    "question": "A risk team is testing a fragile trading algorithm under increasingly severe market-stress scenarios numbered 1 through 100. There is an unknown threshold scenario N. If the algorithm is tested at scenario N or any more severe scenario, that copy of the algorithm becomes permanently corrupted. If it is tested below scenario N, it survives and can be tested again. The team has exactly 2 identical copies of the algorithm. They need to determine N with the smallest possible worst-case number of tests. What is the minimum worst-case number of tests?",
+    "answer": "14",
+    "answer_type": "number"
   },
   {
     "id": "b03",
     "topic": "brainteaser",
-    "question": "Three trading algorithms, A, B, and C, are competing in a knockout stress-test tournament. They act in a fixed order: A, then B, then C, then back to A, continuing until only one algorithm remains. On its turn, each algorithm may challenge one remaining opponent or intentionally make no effective challenge. If the challenge succeeds, that opponent is removed from the tournament; if it fails, nothing happens. Algorithm A succeeds with probability 1/3, B succeeds with probability 2/3, and C succeeds with probability 1. All algorithms are strategic and want to maximize their own chance of being the final survivor. On A's first turn, should A challenge B, challenge C, or intentionally make no effective challenge? What is A's probability of ultimately winning under its best strategy?",
-    "answer": "A should intentionally make no effective challenge on the first turn. Its probability of ultimately winning is 25/63, approximately 39.7%.",
-    "answer_type": "string"
+    "question": "Three trading algorithms, A, B, and C, are competing in a knockout stress-test tournament. They act in a fixed order: A, then B, then C, then back to A, continuing until only one algorithm remains. On its turn, each algorithm may challenge one remaining opponent or intentionally make no effective challenge. If the challenge succeeds, that opponent is removed from the tournament; if it fails, nothing happens. Algorithm A succeeds with probability 1/3, B succeeds with probability 2/3, and C succeeds with probability 1. All algorithms are strategic and want to maximize their own chance of being the final survivor. On A's first turn, A can challenge B, challenge C, or intentionally make no effective challenge. What is A's probability of ultimately winning under its best strategy?",
+    "answer": "25/63",
+    "answer_type": "number"
   },
   {
     "id": "b04",
     "topic": "brainteaser",
     "question": "A batch-processing system labels trades using positive integer IDs. A particular trade ID must satisfy three audit rules. Rule 1: when the ID is divided by 4, it leaves remainder 3. Rule 2: when the ID is divided by 6, it leaves remainder 5. Rule 3: when the ID is divided by 9, it leaves remainder 7. Does such a positive trade ID exist?",
-    "answer": "No such positive trade ID exists",
+    "answer": "No",
     "answer_type": "string"
   },
   {
@@ -44,7 +44,7 @@
   {
     "id": "b07",
     "topic": "brainteaser",
-    "question": "A distribution center receives 205,891,132,094,689 crates each morning, labeled C000000000000001 through C205891132094689 in arrival order, forming a single intake queue. Note that 205,891,132,094,689 = 3^30 + 40. The supervisor walks down the queue inspecting crates in a repeating three-crate cycle: the first crate is cleared and sent to the warehouse floor; the second crate has a damaged seal and is sent to returns; the third crate has a labeling error and is sent for relabeling. The supervisor then repeats this same clear/return/relabel cycle. When the supervisor reaches the end of the queue, the cleared crates are rolled back onto the dock in the order they were cleared, rejoining the end of the queue for another pass. Returned and relabeled crates do not come back. The supervisor continues without pause into the returning batch, so the clear/return/relabel cycle does not restart at the beginning of a new pass. This continues until only one crate has not yet been sent to returns or relabeling. Which crate is it?",
+    "question": "A distribution center receives 205,891,132,094,689 crates each morning, labeled C000000000000001 through C205891132094689 in arrival order, forming a single intake queue. Note that 205,891,132,094,689 = 3^30 + 40. The supervisor walks down the queue inspecting crates in a repeating three-crate cycle: the first crate is cleared and sent to the warehouse floor; the second crate has a damaged seal and is sent to returns; the third crate has a labeling error and is sent for relabeling. The supervisor then repeats this same clear/return/relabel cycle. When the supervisor reaches the end of the queue, the cleared crates are rolled back onto the dock in the order they were cleared, rejoining the end of the queue for another pass. Returned and relabeled crates do not come back. The supervisor continues without pause into the returning batch, so the clear/return/relabel cycle does not restart at the beginning of a new pass. This continues until only one crate has not yet been sent to returns or relabeling. What is that crate's label?",
     "answer": "C000000000000061",
     "answer_type": "string"
   },
@@ -65,8 +65,8 @@
   {
     "id": "b10",
     "topic": "brainteaser",
-    "question": "Two data-cleaning scripts process transaction files. Script A can clean 1 file per hour. Script B can clean 2 files per hour. If both scripts work at the same time on the same batch, how long will it take them to clean 1 file-equivalent of work?",
-    "answer": "20 minutes",
-    "answer_type": "string"
+    "question": "Two data-cleaning scripts process transaction files. Script A can clean 1 file per hour. Script B can clean 2 files per hour. If both scripts work at the same time on the same batch, how many minutes will it take them to clean 1 file-equivalent of work?",
+    "answer": "20",
+    "answer_type": "number"
   }
 ]

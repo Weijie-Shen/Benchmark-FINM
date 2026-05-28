@@ -45,7 +45,7 @@
     "id": "ml07",
     "topic": "machine_learning",
     "question": "You are taking samples of size s from a population. Let p be the desired confidence (e.g., 0.99) and e the proportion of outliers in the population. Derive an equation in terms of s, p, and e for the number of samples N needed to be at least p-confident that at least one sample contains no outliers. Show your work.",
-    "answer": "N > log(1 - p) / log(1 - (1 - e)^s)",
+    "answer": "N = ceil(log(1-p) / log(1-(1-e)^s))",
     "answer_type": "string"
   },
   {

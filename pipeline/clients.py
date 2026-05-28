@@ -67,6 +67,7 @@ KNOWN_JUDGE_PRICING: dict[str, tuple[float, float]] = {
     "openai/gpt-5.5":               (5.000, 30.000),
     "anthropic/claude-sonnet-4.6":  (3.000, 15.000),
     "x-ai/grok-4.3":                (1.250, 2.500),
+    "qwen/qwen3.6-flash":           (0.188, 1.125),
 }
 
 
@@ -305,6 +306,64 @@ def _parse_number(s: str | None) -> float | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Binary-judge output parsing
+# ---------------------------------------------------------------------------
+# Word-boundary YES/NO patterns, case-insensitive. Word boundaries mean
+# "NO" in "Note" / "know" / "NOT" doesn't match, but "Line 3: YES",
+# "**YES**", "Verdict: NO." all do. Crucial for judges that prefix the
+# verdict with "Line 3: " — the previous `startswith("YES")` check
+# silently scored those as NO.
+_VERDICT_YES_RX = re.compile(r"\bYES\b", re.IGNORECASE)
+_VERDICT_NO_RX = re.compile(r"\bNO\b", re.IGNORECASE)
+
+
+def _verdict_is_yes(text: str) -> bool:
+    """Scan the judge's text from the bottom up for a YES/NO verdict.
+    The first non-empty line containing any YES/NO token wins. If both
+    appear in the same line, the later occurrence wins. Raises
+    BinaryJudgeParseError if no YES/NO appears anywhere."""
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    for line in reversed(lines):
+        ys = list(_VERDICT_YES_RX.finditer(line))
+        ns = list(_VERDICT_NO_RX.finditer(line))
+        if ys and not ns:
+            return True
+        if ns and not ys:
+            return False
+        if ys and ns:
+            return ys[-1].start() > ns[-1].start()
+    raise BinaryJudgeParseError(
+        f"no YES/NO verdict found in judge reply ({len(text)} chars)"
+    )
+
+
+# Common label prefixes judges sometimes prepend to their 3-line output.
+# Stripped from the extracted_answer line so the Result row stays clean.
+_LABEL_PREFIX_RX = re.compile(
+    r"^(?:Line\s*\d*\s*[:\.]\s*"
+    r"|Extracted\s*[:\.]\s*"
+    r"|Answer\s*[:\.]\s*"
+    r"|Verdict\s*[:\.]\s*"
+    r"|Reason\s*[:\.]\s*)",
+    re.IGNORECASE,
+)
+
+
+def _strip_label(line: str) -> str:
+    """Strip 'Line 1:', 'Extracted:', 'Verdict:', etc. plus outer markdown
+    emphasis (**...**, __...__, *...*, _..._) from `line`. Returns the
+    bare value for `extracted_answer`."""
+    line = _LABEL_PREFIX_RX.sub("", line).strip()
+    for pat in (r"^\*\*(.+?)\*\*$", r"^__(.+?)__$",
+                r"^\*(.+?)\*$", r"^_(.+?)_$"):
+        m = re.match(pat, line)
+        if m:
+            line = m.group(1).strip()
+            break
+    return line
+
+
 def _numeric_precheck(expected: str, raw_response: str
                       ) -> tuple[bool, str, str] | None:
     """Try to decide the cell deterministically by numeric comparison.
@@ -361,7 +420,16 @@ def _parse_rubric_judge_output(text: str, rubric: dict) -> tuple[float, list[dic
 
     max_by_id = {cr["id"]: float(cr["points"])
                  for cat in rubric["categories"] for cr in cat["criteria"]}
-    for item in breakdown:
+    # Tolerate non-dict items in the scores list: grok stuffs a stray
+    # "summary: ..." string at the end of the list, and the actual scoring
+    # dicts are still intact. Skip non-dicts. If NO dict items survive,
+    # raise (genuinely malformed output, no usable verdict).
+    dict_items = [it for it in breakdown if isinstance(it, dict)]
+    if not dict_items:
+        raise RubricJudgeParseError(
+            f"'scores' list has no dict items (got: {breakdown!r})"
+        )
+    for item in dict_items:
         cid = item.get("id")
         if cid in max_by_id:
             try:
@@ -369,9 +437,9 @@ def _parse_rubric_judge_output(text: str, rubric: dict) -> tuple[float, list[dic
             except (TypeError, ValueError):
                 item["score"] = 0.0
 
-    raw_total = sum(item["score"] for item in breakdown
+    raw_total = sum(item["score"] for item in dict_items
                     if isinstance(item.get("score"), (int, float)))
-    return min(raw_total, float(rubric["total_points"])), breakdown
+    return min(raw_total, float(rubric["total_points"])), dict_items
 
 
 async def _call_judge(system: str, user: str, max_tokens: int,
@@ -453,11 +521,13 @@ async def judge_answer(question: str, expected: str,
         raise BinaryJudgeParseError(
             "binary judge returned empty reply (would have silently scored 0)")
 
-    # Judge is asked for exactly 3 lines (extracted / reason / YES|NO).
-    # Be tolerant: extracted = first line, verdict = last line.
-    extracted = lines[0]
-    verdict = lines[-1].upper()
-    return verdict.startswith("YES"), extracted, text, stats
+    # Judge is asked for exactly 3 lines (extracted / reason / YES|NO) but
+    # in practice often emits 'Line 3: YES', '**YES**', 'Verdict: NO.', etc.
+    # _verdict_is_yes scans bottom-up for the first \bYES\b or \bNO\b token;
+    # _strip_label cleans 'Line 1:' / 'Extracted:' prefixes from line 0.
+    is_yes = _verdict_is_yes(text)
+    extracted = _strip_label(lines[0])
+    return is_yes, extracted, text, stats
 
 
 async def judge_rubric_score(question: str, rubric: dict,

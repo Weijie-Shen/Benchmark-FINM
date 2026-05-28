@@ -15,6 +15,9 @@ env/
 LLM/
 *.egg-info/
 
+# Generated report figures (regenerate with make_report.py)
+report_figures/
+
 # Sharing archives — keep out of git
 *.zip
 *.tar.gz

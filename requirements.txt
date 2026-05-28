@@ -2,3 +2,6 @@
 # can shift behavior (param names, response shapes, etc.) and break repro.
 python-dotenv==1.0.1
 openai==1.59.9
+# Used only by make_report.py for generating PNGs. Heavy but standard;
+# remove if you don't need the report generator.
+matplotlib==3.10.9

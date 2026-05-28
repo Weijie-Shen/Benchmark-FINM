@@ -1,18 +1,16 @@
 {
-  "timestamp": "run2_judge_gemini_v3",
+  "timestamp": "run3_qwen",
   "num_questions": 50,
   "num_models": 10,
   "max_possible_score": 50.0,
-  "total_cost_usd": 4.738913628000001,
+  "total_cost_usd": 6.314169822,
   "per_model": {
     "seed-2.0-lite": {
-      "score_total": 40.949999999999996,
+      "score_total": 41.55,
       "total": 50,
       "errors": 0,
       "missed_ids": [
-        "b05",
         "cf07",
-        "cf08",
         "cf10",
         "d01",
         "d02",
@@ -20,26 +18,27 @@
         "d04",
         "d05",
         "d06",
-        "d07",
+        "d09",
         "ml03",
-        "ml06"
+        "ml06",
+        "p07"
       ],
       "error_ids": [],
       "per_category": {
         "brainteaser": {
-          "score": 9.0,
+          "score": 10.0,
           "total": 10,
-          "accuracy": 0.9
+          "accuracy": 1.0
         },
         "corporate_finance": {
-          "score": 7.0,
+          "score": 8.0,
           "total": 10,
-          "accuracy": 0.7
+          "accuracy": 0.8
         },
         "derivatives": {
-          "score": 6.949999999999999,
+          "score": 6.550000000000001,
           "total": 10,
-          "accuracy": 0.695
+          "accuracy": 0.655
         },
         "machine_learning": {
           "score": 8.0,
@@ -47,116 +46,117 @@
           "accuracy": 0.8
         },
         "probability": {
-          "score": 10.0,
+          "score": 9.0,
           "total": 10,
-          "accuracy": 1.0
+          "accuracy": 0.9
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.38158449999999994,
-      "judge_cost_usd": 0.021519000000000003,
-      "total_cost_usd": 0.40310349999999995,
-      "model_input_tokens": 18370,
-      "model_output_tokens": 188496,
-      "model_reasoning_tokens": 164336,
-      "judge_input_tokens": 73656,
-      "judge_output_tokens": 2070,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 7739.874387979507,
-      "judge_latency_s_total": 51.456770181655884,
-      "missing_final_answer_line": 4,
-      "accuracy": 0.819,
-      "avg_model_latency_s": 154.79748775959015,
-      "avg_judge_latency_s": 1.0291354036331177
+      "model_cost_usd": 0.37449700000000014,
+      "judge_cost_usd": 0.244058079,
+      "total_cost_usd": 0.6185550790000002,
+      "model_input_tokens": 18356,
+      "model_output_tokens": 184954,
+      "model_reasoning_tokens": 160147,
+      "judge_input_tokens": 73158,
+      "judge_output_tokens": 204715,
+      "judge_reasoning_tokens": 202573,
+      "model_latency_s_total": 7819.53583240509,
+      "judge_latency_s_total": 1176.345500946045,
+      "missing_final_answer_line": 2,
+      "accuracy": 0.831,
+      "avg_model_latency_s": 156.3907166481018,
+      "avg_judge_latency_s": 23.526910018920898
     },
     "claude-sonnet-4.6": {
-      "score_total": 38.15,
+      "score_total": 38.699999999999996,
       "total": 50,
       "errors": 0,
       "missed_ids": [
         "b03",
+        "b05",
+        "b06",
         "b07",
         "b08",
+        "d01",
+        "d02",
+        "d03",
+        "d04",
+        "d05",
+        "d06",
+        "d09",
+        "ml06",
+        "p01",
+        "p06",
+        "p07"
+      ],
+      "error_ids": [],
+      "per_category": {
+        "brainteaser": {
+          "score": 5.0,
+          "total": 10,
+          "accuracy": 0.5
+        },
+        "corporate_finance": {
+          "score": 10.0,
+          "total": 10,
+          "accuracy": 1.0
+        },
+        "derivatives": {
+          "score": 7.7,
+          "total": 10,
+          "accuracy": 0.77
+        },
+        "machine_learning": {
+          "score": 9.0,
+          "total": 10,
+          "accuracy": 0.9
+        },
+        "probability": {
+          "score": 7.0,
+          "total": 10,
+          "accuracy": 0.7
+        }
+      },
+      "sampling_controlled": true,
+      "model_cost_usd": 0.593613,
+      "judge_cost_usd": 0.23611194599999993,
+      "total_cost_usd": 0.8297249459999999,
+      "model_input_tokens": 17316,
+      "model_output_tokens": 36111,
+      "model_reasoning_tokens": 0,
+      "judge_input_tokens": 72642,
+      "judge_output_tokens": 197738,
+      "judge_reasoning_tokens": 195469,
+      "model_latency_s_total": 822.4524331092834,
+      "judge_latency_s_total": 964.4353132247925,
+      "missing_final_answer_line": 4,
+      "accuracy": 0.7739999999999999,
+      "avg_model_latency_s": 16.449048662185668,
+      "avg_judge_latency_s": 19.28870626449585
+    },
+    "gpt-5.5": {
+      "score_total": 44.95,
+      "total": 50,
+      "errors": 0,
+      "missed_ids": [
+        "b05",
         "cf07",
         "d01",
         "d02",
         "d03",
         "d04",
-        "d06",
-        "d07",
-        "d08",
-        "ml03",
-        "p01",
-        "p06",
-        "p07",
-        "p09"
-      ],
-      "error_ids": [],
-      "per_category": {
-        "brainteaser": {
-          "score": 7.0,
-          "total": 10,
-          "accuracy": 0.7
-        },
-        "corporate_finance": {
-          "score": 9.0,
-          "total": 10,
-          "accuracy": 0.9
-        },
-        "derivatives": {
-          "score": 7.15,
-          "total": 10,
-          "accuracy": 0.7150000000000001
-        },
-        "machine_learning": {
-          "score": 9.0,
-          "total": 10,
-          "accuracy": 0.9
-        },
-        "probability": {
-          "score": 6.0,
-          "total": 10,
-          "accuracy": 0.6
-        }
-      },
-      "sampling_controlled": true,
-      "model_cost_usd": 0.5762579999999999,
-      "judge_cost_usd": 0.022139250000000006,
-      "total_cost_usd": 0.59839725,
-      "model_input_tokens": 17331,
-      "model_output_tokens": 34951,
-      "model_reasoning_tokens": 0,
-      "judge_input_tokens": 74811,
-      "judge_output_tokens": 2291,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 638.853301525116,
-      "judge_latency_s_total": 50.297049045562744,
-      "missing_final_answer_line": 2,
-      "accuracy": 0.763,
-      "avg_model_latency_s": 12.777066030502318,
-      "avg_judge_latency_s": 1.005940980911255
-    },
-    "gpt-5.5": {
-      "score_total": 44.150000000000006,
-      "total": 50,
-      "errors": 0,
-      "missed_ids": [
-        "b05",
-        "b08",
-        "cf07",
-        "d01",
-        "d02",
-        "d03",
         "d05",
         "d06",
-        "d07"
+        "d07",
+        "d09"
       ],
       "error_ids": [],
       "per_category": {
         "brainteaser": {
-          "score": 8.0,
+          "score": 9.0,
           "total": 10,
-          "accuracy": 0.8
+          "accuracy": 0.9
         },
         "corporate_finance": {
           "score": 9.0,
@@ -164,9 +164,9 @@
           "accuracy": 0.9
         },
         "derivatives": {
-          "score": 7.1499999999999995,
+          "score": 6.949999999999999,
           "total": 10,
-          "accuracy": 0.715
+          "accuracy": 0.695
         },
         "machine_learning": {
           "score": 10.0,
@@ -180,29 +180,30 @@
         }
       },
       "sampling_controlled": false,
-      "model_cost_usd": 1.885545000000001,
-      "judge_cost_usd": 0.018397249999999993,
-      "total_cost_usd": 1.903942250000001,
-      "model_input_tokens": 15801,
-      "model_output_tokens": 60218,
-      "model_reasoning_tokens": 49391,
-      "judge_input_tokens": 60281,
-      "judge_output_tokens": 2218,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 1412.9990079402924,
-      "judge_latency_s_total": 45.277791261672974,
+      "model_cost_usd": 1.70593,
+      "judge_cost_usd": 0.14566190399999998,
+      "total_cost_usd": 1.851591904,
+      "model_input_tokens": 15788,
+      "model_output_tokens": 54233,
+      "model_reasoning_tokens": 43991,
+      "judge_input_tokens": 60183,
+      "judge_output_tokens": 119420,
+      "judge_reasoning_tokens": 117143,
+      "model_latency_s_total": 1014.2721519470215,
+      "judge_latency_s_total": 601.9849002361298,
       "missing_final_answer_line": 1,
-      "accuracy": 0.8830000000000001,
-      "avg_model_latency_s": 28.259980158805845,
-      "avg_judge_latency_s": 0.9055558252334595
+      "accuracy": 0.899,
+      "avg_model_latency_s": 20.28544303894043,
+      "avg_judge_latency_s": 12.039698004722595
     },
     "gemini-3.1-flash-lite": {
-      "score_total": 39.3,
+      "score_total": 37.05,
       "total": 50,
       "errors": 0,
       "missed_ids": [
         "b03",
         "b05",
+        "b06",
         "b07",
         "b08",
         "cf07",
@@ -213,6 +214,7 @@
         "d05",
         "d06",
         "d07",
+        "d09",
         "ml06",
         "p03",
         "p09"
@@ -220,9 +222,9 @@
       "error_ids": [],
       "per_category": {
         "brainteaser": {
-          "score": 6.0,
+          "score": 5.0,
           "total": 10,
-          "accuracy": 0.6
+          "accuracy": 0.5
         },
         "corporate_finance": {
           "score": 9.0,
@@ -230,9 +232,9 @@
           "accuracy": 0.9
         },
         "derivatives": {
-          "score": 7.3,
+          "score": 6.05,
           "total": 10,
-          "accuracy": 0.73
+          "accuracy": 0.605
         },
         "machine_learning": {
           "score": 9.0,
@@ -246,27 +248,28 @@
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.04665025000000001,
-      "judge_cost_usd": 0.020912499999999994,
-      "total_cost_usd": 0.06756275,
-      "model_input_tokens": 16633,
-      "model_output_tokens": 28328,
+      "model_cost_usd": 0.047531,
+      "judge_cost_usd": 0.23633573599999996,
+      "total_cost_usd": 0.28386673599999995,
+      "model_input_tokens": 16622,
+      "model_output_tokens": 28917,
       "model_reasoning_tokens": 0,
-      "judge_input_tokens": 70516,
-      "judge_output_tokens": 2189,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 155.3908350467682,
-      "judge_latency_s_total": 41.25536823272705,
+      "judge_input_tokens": 72097,
+      "judge_output_tokens": 198028,
+      "judge_reasoning_tokens": 195698,
+      "model_latency_s_total": 141.07608103752136,
+      "judge_latency_s_total": 1008.6682548522949,
       "missing_final_answer_line": 0,
-      "accuracy": 0.7859999999999999,
-      "avg_model_latency_s": 3.1078167009353637,
-      "avg_judge_latency_s": 0.825107364654541
+      "accuracy": 0.741,
+      "avg_model_latency_s": 2.8215216207504272,
+      "avg_judge_latency_s": 20.1733650970459
     },
     "grok-4.3": {
-      "score_total": 40.75,
+      "score_total": 39.9,
       "total": 50,
       "errors": 0,
       "missed_ids": [
+        "b07",
         "cf07",
         "cf08",
         "cf09",
@@ -285,9 +288,9 @@
       "error_ids": [],
       "per_category": {
         "brainteaser": {
-          "score": 10.0,
+          "score": 9.0,
           "total": 10,
-          "accuracy": 1.0
+          "accuracy": 0.9
         },
         "corporate_finance": {
           "score": 6.0,
@@ -295,9 +298,9 @@
           "accuracy": 0.6
         },
         "derivatives": {
-          "score": 6.75,
+          "score": 6.9,
           "total": 10,
-          "accuracy": 0.675
+          "accuracy": 0.6900000000000001
         },
         "machine_learning": {
           "score": 8.0,
@@ -311,24 +314,24 @@
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.18953875,
-      "judge_cost_usd": 0.0187435,
-      "total_cost_usd": 0.20828225,
-      "model_input_tokens": 21869,
-      "model_output_tokens": 64881,
-      "model_reasoning_tokens": 51433,
-      "judge_input_tokens": 61630,
-      "judge_output_tokens": 2224,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 382.9595627784729,
-      "judge_latency_s_total": 87.28003764152527,
+      "model_cost_usd": 0.19763250000000004,
+      "judge_cost_usd": 0.058155664,
+      "total_cost_usd": 0.25578816400000004,
+      "model_input_tokens": 21856,
+      "model_output_tokens": 68125,
+      "model_reasoning_tokens": 53801,
+      "judge_input_tokens": 59828,
+      "judge_output_tokens": 41696,
+      "judge_reasoning_tokens": 39433,
+      "model_latency_s_total": 429.9438850879669,
+      "judge_latency_s_total": 231.72893619537354,
       "missing_final_answer_line": 0,
-      "accuracy": 0.815,
-      "avg_model_latency_s": 7.659191255569458,
-      "avg_judge_latency_s": 1.7456007528305053
+      "accuracy": 0.7979999999999999,
+      "avg_model_latency_s": 8.598877701759339,
+      "avg_judge_latency_s": 4.63457872390747
     },
     "qwen3.6-flash": {
-      "score_total": 41.5,
+      "score_total": 41.65,
       "total": 50,
       "errors": 0,
       "missed_ids": [
@@ -341,10 +344,11 @@
         "d05",
         "d06",
         "d07",
+        "d09",
+        "ml03",
         "ml06",
         "p06",
-        "p09",
-        "p10"
+        "p09"
       ],
       "error_ids": [],
       "per_category": {
@@ -359,44 +363,43 @@
           "accuracy": 0.9
         },
         "derivatives": {
-          "score": 7.499999999999999,
+          "score": 7.65,
           "total": 10,
-          "accuracy": 0.7499999999999999
+          "accuracy": 0.765
         },
         "machine_learning": {
-          "score": 9.0,
+          "score": 8.0,
           "total": 10,
-          "accuracy": 0.9
+          "accuracy": 0.8
         },
         "probability": {
-          "score": 7.0,
+          "score": 8.0,
           "total": 10,
-          "accuracy": 0.7
+          "accuracy": 0.8
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.6712168279999999,
-      "judge_cost_usd": 0.020836250000000004,
-      "total_cost_usd": 0.6920530779999999,
-      "model_input_tokens": 16906,
-      "model_output_tokens": 593812,
-      "model_reasoning_tokens": 553133,
-      "judge_input_tokens": 70577,
-      "judge_output_tokens": 2128,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 2856.3993978500366,
-      "judge_latency_s_total": 29.259591341018677,
-      "missing_final_answer_line": 1,
-      "accuracy": 0.83,
-      "avg_model_latency_s": 57.127987957000734,
-      "avg_judge_latency_s": 0.5851918268203735
+      "model_cost_usd": 0.604732321,
+      "judge_cost_usd": 0.15155904899999997,
+      "total_cost_usd": 0.7562913699999999,
+      "model_input_tokens": 16892,
+      "model_output_tokens": 534717,
+      "model_reasoning_tokens": 490673,
+      "judge_input_tokens": 70098,
+      "judge_output_tokens": 123005,
+      "judge_reasoning_tokens": 120819,
+      "model_latency_s_total": 2695.9103558063507,
+      "judge_latency_s_total": 613.7358686923981,
+      "missing_final_answer_line": 2,
+      "accuracy": 0.833,
+      "avg_model_latency_s": 53.918207116127014,
+      "avg_judge_latency_s": 12.274717373847961
     },
     "deepseek-v4-flash": {
-      "score_total": 37.8,
+      "score_total": 38.5,
       "total": 50,
       "errors": 0,
       "missed_ids": [
-        "b03",
         "b05",
         "b07",
         "cf07",
@@ -408,18 +411,17 @@
         "d06",
         "d07",
         "d09",
+        "ml03",
         "ml06",
-        "p02",
-        "p06",
-        "p07",
-        "p09"
+        "p01",
+        "p03"
       ],
       "error_ids": [],
       "per_category": {
         "brainteaser": {
-          "score": 7.0,
+          "score": 8.0,
           "total": 10,
-          "accuracy": 0.7
+          "accuracy": 0.8
         },
         "corporate_finance": {
           "score": 9.0,
@@ -427,40 +429,40 @@
           "accuracy": 0.9
         },
         "derivatives": {
-          "score": 6.8,
+          "score": 5.5,
           "total": 10,
-          "accuracy": 0.6799999999999999
+          "accuracy": 0.55
         },
         "machine_learning": {
-          "score": 9.0,
+          "score": 8.0,
           "total": 10,
-          "accuracy": 0.9
+          "accuracy": 0.8
         },
         "probability": {
-          "score": 6.0,
+          "score": 8.0,
           "total": 10,
-          "accuracy": 0.6
+          "accuracy": 0.8
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.045071999999999994,
-      "judge_cost_usd": 0.01559575,
-      "total_cost_usd": 0.06066774999999999,
-      "model_input_tokens": 15798,
-      "model_output_tokens": 217461,
-      "model_reasoning_tokens": 200225,
-      "judge_input_tokens": 49477,
-      "judge_output_tokens": 2151,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 3386.481681585312,
-      "judge_latency_s_total": 26.08369541168213,
-      "missing_final_answer_line": 7,
-      "accuracy": 0.7559999999999999,
-      "avg_model_latency_s": 67.72963363170624,
-      "avg_judge_latency_s": 0.5216739082336426
+      "model_cost_usd": 0.03910550000000001,
+      "judge_cost_usd": 0.500534104,
+      "total_cost_usd": 0.539639604,
+      "model_input_tokens": 15785,
+      "model_output_tokens": 187635,
+      "model_reasoning_tokens": 161173,
+      "judge_input_tokens": 52583,
+      "judge_output_tokens": 436132,
+      "judge_reasoning_tokens": 434235,
+      "model_latency_s_total": 2212.1656007766724,
+      "judge_latency_s_total": 1995.8110098838806,
+      "missing_final_answer_line": 6,
+      "accuracy": 0.77,
+      "avg_model_latency_s": 44.24331201553345,
+      "avg_judge_latency_s": 39.91622019767761
     },
     "gpt-4o": {
-      "score_total": 26.4,
+      "score_total": 25.4,
       "total": 50,
       "errors": 0,
       "missed_ids": [
@@ -468,7 +470,6 @@
         "b06",
         "b07",
         "b08",
-        "cf04",
         "cf07",
         "cf08",
         "d01",
@@ -487,8 +488,10 @@
         "p01",
         "p02",
         "p03",
+        "p04",
         "p05",
         "p06",
+        "p07",
         "p09",
         "p10"
       ],
@@ -500,14 +503,14 @@
           "accuracy": 0.6
         },
         "corporate_finance": {
-          "score": 7.0,
+          "score": 8.0,
           "total": 10,
-          "accuracy": 0.7
+          "accuracy": 0.8
         },
         "derivatives": {
-          "score": 3.3999999999999995,
+          "score": 3.4000000000000004,
           "total": 10,
-          "accuracy": 0.33999999999999997
+          "accuracy": 0.34
         },
         "machine_learning": {
           "score": 7.0,
@@ -515,30 +518,30 @@
           "accuracy": 0.7
         },
         "probability": {
-          "score": 3.0,
+          "score": 1.0,
           "total": 10,
-          "accuracy": 0.3
+          "accuracy": 0.1
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.2623175,
-      "judge_cost_usd": 0.022835,
-      "total_cost_usd": 0.2851525,
-      "model_input_tokens": 15851,
-      "model_output_tokens": 22269,
+      "model_cost_usd": 0.25848499999999996,
+      "judge_cost_usd": 0.24400254800000007,
+      "total_cost_usd": 0.5024875480000001,
+      "model_input_tokens": 15838,
+      "model_output_tokens": 21889,
       "model_reasoning_tokens": 0,
-      "judge_input_tokens": 77678,
-      "judge_output_tokens": 2277,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 501.6029779911041,
-      "judge_latency_s_total": 40.13170886039734,
+      "judge_input_tokens": 84346,
+      "judge_output_tokens": 202796,
+      "judge_reasoning_tokens": 200416,
+      "model_latency_s_total": 223.4012804031372,
+      "judge_latency_s_total": 1322.2738997936249,
       "missing_final_answer_line": 0,
-      "accuracy": 0.528,
-      "avg_model_latency_s": 10.032059559822082,
-      "avg_judge_latency_s": 0.8026341772079468
+      "accuracy": 0.508,
+      "avg_model_latency_s": 4.468025608062744,
+      "avg_judge_latency_s": 26.445477995872498
     },
     "claude-3-haiku": {
-      "score_total": 12.5,
+      "score_total": 13.45,
       "total": 50,
       "errors": 0,
       "missed_ids": [
@@ -567,7 +570,6 @@
         "d10",
         "ml02",
         "ml03",
-        "ml04",
         "ml05",
         "ml06",
         "ml08",
@@ -595,14 +597,14 @@
           "accuracy": 0.5
         },
         "derivatives": {
-          "score": 1.5000000000000002,
+          "score": 1.45,
           "total": 10,
-          "accuracy": 0.15000000000000002
+          "accuracy": 0.145
         },
         "machine_learning": {
-          "score": 2.0,
+          "score": 3.0,
           "total": 10,
-          "accuracy": 0.2
+          "accuracy": 0.3
         },
         "probability": {
           "score": 2.0,
@@ -611,27 +613,29 @@
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.022287749999999995,
-      "judge_cost_usd": 0.02376575,
-      "total_cost_usd": 0.0460535,
-      "model_input_tokens": 17281,
-      "model_output_tokens": 14374,
+      "model_cost_usd": 0.021790249999999997,
+      "judge_cost_usd": 0.15871294900000005,
+      "total_cost_usd": 0.18050319900000006,
+      "model_input_tokens": 17266,
+      "model_output_tokens": 13979,
       "model_reasoning_tokens": 0,
-      "judge_input_tokens": 79739,
-      "judge_output_tokens": 2554,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 166.47693753242493,
-      "judge_latency_s_total": 37.78517770767212,
+      "judge_input_tokens": 87398,
+      "judge_output_tokens": 126473,
+      "judge_reasoning_tokens": 123918,
+      "model_latency_s_total": 153.1525309085846,
+      "judge_latency_s_total": 998.135986328125,
       "missing_final_answer_line": 0,
-      "accuracy": 0.25,
-      "avg_model_latency_s": 3.3295387506484984,
-      "avg_judge_latency_s": 0.7557035541534424
+      "accuracy": 0.26899999999999996,
+      "avg_model_latency_s": 3.063050618171692,
+      "avg_judge_latency_s": 19.9627197265625
     },
     "gemini-2.5-flash": {
-      "score_total": 36.55,
+      "score_total": 33.849999999999994,
       "total": 50,
       "errors": 0,
       "missed_ids": [
+        "b03",
+        "b05",
         "b07",
         "cf04",
         "cf07",
@@ -642,10 +646,11 @@
         "d04",
         "d05",
         "d07",
+        "d08",
         "d09",
         "d10",
         "ml03",
-        "ml05",
+        "ml06",
         "p03",
         "p06",
         "p09"
@@ -653,9 +658,9 @@
       "error_ids": [],
       "per_category": {
         "brainteaser": {
-          "score": 9.0,
+          "score": 7.0,
           "total": 10,
-          "accuracy": 0.9
+          "accuracy": 0.7
         },
         "corporate_finance": {
           "score": 7.0,
@@ -663,9 +668,9 @@
           "accuracy": 0.7
         },
         "derivatives": {
-          "score": 5.55,
+          "score": 4.85,
           "total": 10,
-          "accuracy": 0.5549999999999999
+          "accuracy": 0.485
         },
         "machine_learning": {
           "score": 8.0,
@@ -679,22 +684,22 @@
         }
       },
       "sampling_controlled": true,
-      "model_cost_usd": 0.4309898,
-      "judge_cost_usd": 0.04270900000000002,
-      "total_cost_usd": 0.4736988,
-      "model_input_tokens": 16591,
-      "model_output_tokens": 170405,
+      "model_cost_usd": 0.4091184,
+      "judge_cost_usd": 0.08660287199999998,
+      "total_cost_usd": 0.495721272,
+      "model_input_tokens": 16578,
+      "model_output_tokens": 161658,
       "model_reasoning_tokens": 0,
-      "judge_input_tokens": 155470,
-      "judge_output_tokens": 2561,
-      "judge_reasoning_tokens": 0,
-      "model_latency_s_total": 821.0033478736877,
-      "judge_latency_s_total": 70.35521078109741,
-      "missing_final_answer_line": 32,
-      "accuracy": 0.731,
-      "avg_model_latency_s": 16.420066957473754,
-      "avg_judge_latency_s": 1.4071042156219482
+      "judge_input_tokens": 154869,
+      "judge_output_tokens": 51100,
+      "judge_reasoning_tokens": 48643,
+      "model_latency_s_total": 687.4351632595062,
+      "judge_latency_s_total": 295.7423462867737,
+      "missing_final_answer_line": 30,
+      "accuracy": 0.6769999999999999,
+      "avg_model_latency_s": 13.748703265190125,
+      "avg_judge_latency_s": 5.914846925735474
     }
   },
-  "details_file": "details_run2_judge_gemini_v3.json"
+  "details_file": "details_run3_qwen.json"
 }

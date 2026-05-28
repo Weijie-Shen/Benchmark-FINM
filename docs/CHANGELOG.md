@@ -6,6 +6,99 @@ Version history for the Quant Interview Benchmark. The current spec lives in
 
 ---
 
+## v3.12 — judge robustness fixes + 5-judge run3 + report generator (2026-05-27)
+
+Cross-judge work on run3 surfaced several latent parser bugs and a
+prompt failure mode in Sonnet. This version closes those plus adds a
+report-figure generator.
+
+Pipeline robustness:
+
+- **Binary verdict parser fix** (`pipeline/clients.py`). The previous
+  check `lines[-1].upper().startswith("YES")` silently scored as NO any
+  judge output where the verdict was prefixed: `"Line 3: YES"`,
+  `"**YES**"`, `"Verdict: YES."`. Replaced with `_verdict_is_yes(text)`
+  which scans bottom-up for `\bYES\b` / `\bNO\b` tokens. On the existing
+  run2 data this fix would have flipped 14 cells from wrongly-NO to
+  correctly-YES (5 deepseek + 9 sonnet). Raises `BinaryJudgeParseError`
+  if no YES/NO appears anywhere — surfaces judge-failure cases that
+  used to be hidden as silent NOs.
+
+- **Label-stripping for `extracted_answer`** (`_strip_label` in
+  `clients.py`). Removes `Line 1:`, `Extracted:`, `Verdict:`, and outer
+  markdown emphasis (`**...**`, `__...__`, `*...*`, `_..._`) so the
+  Result row's extracted_answer stays clean across judges.
+
+- **Tolerant rubric parser, third fallback** (`_parse_rubric_judge_output`).
+  Grok-4.3 emits a `"summary: ..."` STRING inside the `"scores"` list
+  (instead of as a top-level `"summary"` key). The parser now skips
+  non-dict items instead of crashing with `AttributeError: 'str' object
+  has no attribute 'get'` — which was killing the whole orchestrated
+  run, not just one cell. If no dict items survive, raises
+  `RubricJudgeParseError`.
+
+- **Anti-solving prompt guards** (`pipeline/prompts.py`). Both
+  `JUDGE_SYSTEM_PROMPT` and `RUBRIC_JUDGE_SYSTEM_PROMPT` open with a
+  "YOU ARE A COMPARATOR/GRADER, NOT A SOLVER" block. Sonnet had been
+  re-deriving expected answers for hard problems and sometimes
+  producing essays with no YES/NO verdict at all (7 such cells in run2
+  sonnet, 1 in run3 sonnet). The new guard explicitly forbids the
+  "Looking at this problem..." / "Let me verify..." preamble pattern
+  and ends the binary prompt with an action-consequence reminder.
+
+- **New judge in registry**: `qwen/qwen3.6-flash` at $0.188/$1.125 per
+  Mtok. ⚠️ Despite the "flash" name, qwen does extensive internal
+  reasoning (~15 K reasoning tokens per rubric cell observed), making
+  actual cost ~$2.07 for a full rejudge — closer to sonnet than to
+  gemini-flash-lite. Documented in the README cost table.
+
+Dataset revisions:
+
+- **`data/brainteaser.json`**: 7 of 10 questions revised to use
+  single-token expected answers (`number` answer_type where possible).
+  Multi-fact strategy/answer combos (e.g. "14 tests in the worst case.
+  Use decreasing interval sizes...") consolidated to just the number.
+  These cells now hit the numeric pre-check fast-path → no judge
+  variance.
+
+- **`data/machine_learning.json`** / ml07: expected answer changed
+  from `"N > log(1 - p) / log(1 - (1 - e)^s)"` to
+  `"N = ceil(log(1-p) / log(1-(1-e)^s))"`. The original strict
+  inequality was the dominant source of ML disagreements in run2 (8 of
+  15 ML disagreement cells were ml07 with judges splitting on
+  `>` vs `≥` vs `ceil(...)` literalism). The ceil form is the
+  idiomatic textbook answer and unambiguous.
+
+New tooling:
+
+- **`make_report.py`** — report-figure generator. Loads any number of
+  `details_run<N>_<judge>.json` files (default: auto-detects the
+  highest-numbered run) and emits 5 PNGs to `report_figures/`:
+  leaderboard, per-category heatmap, per-category cross-judge spread,
+  per-cell rubric spread (top-N by spread), N-way agreement
+  breakdown. `--canonical-judge <name>` switches the leaderboard +
+  heatmap to a single-judge view (no error bars) while the comparison
+  charts stay multi-judge. Adds `matplotlib==3.10.9` to
+  `requirements.txt`.
+
+- **Smarter filename label inference.** Supports both old
+  `details_runN_judge_X.json` and new `details_runN_X.json` naming
+  conventions. The default glob picks the latest run automatically;
+  passing `--inputs` explicitly still works.
+
+Cross-judge experiment results (run3):
+
+- `results/details_run3_{deepseek,gemini,grok,sonnet,qwen}.json` —
+  same 500 model outputs, 5 judges. Total points awarded:
+  sonnet=372.25 > gemini=358.70 > qwen=355.00 > deepseek=345.55 >
+  grok=338.90. Binary cells split (any disagreement) on only 6.4% of
+  cells across 5 judges; derivatives (rubric) shows a 16.35-point
+  cross-judge spread, structurally judge-dependent.
+
+- `gpt-5.5` was considered as a 5th judge but rejected — OpenRouter's
+  catalog lists `supports_temperature=False` for it, meaning verdicts
+  would be non-deterministic across runs.
+
 ## v3.11 — cross-judge experimentation: pluggable judge + numeric pre-check (2026-05-27)
 
 Motivated by observing meaningful judgement variance across judges on the

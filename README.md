@@ -23,26 +23,32 @@ LLM/bin/pip install -r requirements.txt
 cp .env.example .env                  # then paste your OPENROUTER_API_KEY into .env
 ```
 
-### The four commands
+### The five commands
 
 ```bash
 # 1. Standard full run — 10 models × 50 questions = 500 cells
-LLM/bin/python run_benchmark.py --label run2
+LLM/bin/python run_benchmark.py --label run3_deepseek
 
 # 2. If the run crashed mid-flight
-LLM/bin/python resume_run.py --label run2
+LLM/bin/python resume_run.py --label run3_deepseek
 # Reads the partial details_*.jsonl, runs only the missing cells.
 
 # 3. If the final output has `error` rows
-LLM/bin/python rerun_errors.py --label run2_fixed
+LLM/bin/python rerun_errors.py --label run3_deepseek_v2
 # Re-runs each error cell. Cheap (only judge) when raw_response was preserved.
 
 # 4. Re-judge an existing run with a different judge (judge swap, no model calls)
 LLM/bin/python rejudge_run.py \
-    --details results/details_run2.json \
+    --details results/details_run3_deepseek.json \
     --judge anthropic/claude-sonnet-4.6 \
-    --label run2_judge_sonnet
+    --label run3_sonnet
 # Reuses each cell's raw_response, calls only the judge. Isolates judge effect.
+
+# 5. Generate report figures (leaderboard, heatmap, cross-judge comparison)
+LLM/bin/python make_report.py --canonical-judge deepseek
+# Auto-detects all `details_run<N>_<judge>.json` files for the latest run.
+# Writes 5 PNGs to report_figures/. Use --canonical-judge to pick the judge
+# for the leaderboard + heatmap; comparison charts always show all judges.
 ```
 
 `--label` controls the output filename suffix (defaults to a timestamp if
@@ -64,9 +70,25 @@ LLM/bin/python run_benchmark.py --questions data/derivatives.json --label deriv_
 
 ### Cost & time
 
-Full 500-cell run: roughly **$10–15**, **10–40 minutes** at the default
-`concurrency=8`. The two priciest models (`gpt-5.5`, `claude-sonnet-4.6`)
-account for ≈70 % of the bill. Numbers swing ±50 % with response length.
+Full 500-cell run with default deepseek judge: roughly **$5**, **10–25
+minutes** at default `concurrency=8`. Model calls dominate (~$4); judge is
+~$0.50. The numeric pre-check fast-paths ~25% of binary cells with no
+judge call.
+
+Cross-judge experimentation (one full run + multiple `rejudge_run` passes
+with different judges) — observed cost on run3:
+
+| Judge | Pricing ($/Mtok in/out) | Full rejudge cost |
+|---|---|---:|
+| google/gemini-3.1-flash-lite | 0.25 / 1.50 | $0.23 |
+| deepseek/deepseek-v4-pro | 0.435 / 0.87 | $0.54 |
+| x-ai/grok-4.3 | 1.25 / 2.50 | $1.31 |
+| qwen/qwen3.6-flash | 0.188 / 1.125 | $2.06 (reasoning-heavy) |
+| anthropic/claude-sonnet-4.6 | 3.00 / 15.00 | $2.92 |
+| openai/gpt-5.5 | 5.00 / 30.00 | ~$8 (predicted; not run) |
+
+`gpt-5.5` is **not recommended as a judge** — `supports_temperature=False`
+in OpenRouter's catalog means verdicts are non-deterministic across runs.
 
 ---
 
@@ -184,7 +206,7 @@ summary**, **token usage**, and **issues per model**.
 ├── README.md                <- this file
 ├── docs/
 │   ├── SPEC_v3.md           <- locked spec; field reference, design rationale
-│   ├── CHANGELOG.md         <- version history (v3.0 → v3.10)
+│   ├── CHANGELOG.md         <- version history (v3.0 → current)
 │   └── archive/             <- older locked specs
 ├── data/                    <- one JSON per category
 ├── pipeline/
@@ -196,12 +218,14 @@ summary**, **token usage**, and **issues per model**.
 │   ├── output.py            <- write details / summary / scores files
 │   └── runner.py            <- Result schema, per-cell evaluation, shared
 │                               orchestration helpers (rejudge, row_to_result)
-├── run_benchmark.py         <- (script 1/4) standard full run
-├── resume_run.py            <- (script 2/4) resume from a partial jsonl
-├── rerun_errors.py          <- (script 3/4) re-run `error` rows
-├── rejudge_run.py           <- (script 4/4) re-judge an existing run with a different judge
+├── run_benchmark.py         <- (script 1/5) standard full run
+├── resume_run.py            <- (script 2/5) resume from a partial jsonl
+├── rerun_errors.py          <- (script 3/5) re-run `error` rows
+├── rejudge_run.py           <- (script 4/5) re-judge an existing run with a different judge
+├── make_report.py           <- (script 5/5) generate report figures (PNG) from one or more judge files
 ├── requirements.txt         <- runtime deps (pinned)
-└── results/                 <- benchmark outputs (gitignored)
+├── results/                 <- benchmark outputs
+└── report_figures/          <- PNGs from make_report.py (gitignored)
 ```
 
 Files you typically edit:
@@ -227,7 +251,10 @@ The rest is set-and-forget.
 - **Pipeline bugs don't get silently absorbed.** Only API / timeout / judge-parse errors become cell-level `error` (re-runnable). Dataset typos, SDK mismatches, etc. surface as exceptions. **Model truncation** (`finish_reason == "length"`) is counted as a wrong answer, not an error.
 - **Backward-compatible Result schema.** Every observability field has a default — older-version JSONL rows still round-trip cleanly through `Result(**row)`.
 - **Numeric pre-check fast-path.** Before calling the binary judge, the pipeline tries to parse both expected and the model's committed answer as clean numerics (decimal / percent / fraction / `$199,900.46`-style currency). If they agree within ~0.01% relative tolerance, the cell auto-passes deterministically — no judge call. Skips ~20% of binary cells, eliminates judge-model variance for the easy numeric path. Disagreements still fall through to the judge.
-- **Tolerant judge output parser.** The rubric judge has been observed to emit JSON with trailing commas (gemini), whitespace-padded keys (`" scores"`, deepseek), and chain-of-thought prose followed by raw JSON (sonnet). The parser handles all three before raising `RubricJudgeParseError`.
+- **Tolerant judge output parser.** Real LLM judges have observable failure modes the parser handles before raising `RubricJudgeParseError` / `BinaryJudgeParseError`:
+  - **Rubric (`{"scores": [...]}`)**: trailing commas (gemini), whitespace-padded keys (`" scores"`, deepseek), chain-of-thought prose before the JSON (sonnet), and stray non-dict items in the scores list (grok puts `"summary: ..."` inline).
+  - **Binary (3-line verdict)**: `Line 3: YES` / `**YES**` / `Verdict: NO.` all parse correctly (`startswith("YES")` had silently mis-scored ~3% of cells before this fix). Word-boundary `\bYES\b` / `\bNO\b` matching ignores incidental `know` / `NOT` / `No such X exists` substrings. Label prefixes (`Line 1:`, `Extracted:`) are stripped from `extracted_answer`.
+- **Multi-judge experimentation built in.** `rejudge_run.py` takes any existing `details_*.json` and re-judges every cell with a different judge model, reusing the preserved `raw_response` (no model re-calls). `make_report.py` then loads multiple `details_run<N>_<judge>.json` files and generates a 5-figure report: deepseek-canonical leaderboard + heatmap, plus comparison charts (per-category spread, per-cell rubric spread, N-way agreement breakdown).
 
 ---
 
@@ -236,7 +263,7 @@ The rest is set-and-forget.
 See [SPEC §9](docs/SPEC_v3.md) for the full list. The headlines:
 
 1. **Sample size is small** — 50 questions is enough for ranking, not for tight per-category claims.
-2. **Single judge model.** Every grade depends on `deepseek-v4-pro`. Audit `judge_reasoning` before publishing.
+2. **Judge model variance is real.** Run3 with 5 judges showed up to 16-point spread on the same model outputs in the rubric (derivatives) category. Binary categories are much tighter (4-7 pt spread). For published claims, either use deepseek as the strict canonical (recommended) or report multi-judge median.
 3. **No tools, no multi-sample.** The benchmark measures one configuration.
 4. **Training-data leakage risk.** Many classic interview questions appear on prep sites.
 
